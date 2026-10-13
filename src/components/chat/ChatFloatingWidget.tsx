@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { getBrowserMessagesService } from "@/services/messages";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { ChatIcon, ExternalLinkIcon } from "@/components/ui/icons";
@@ -12,7 +13,9 @@ import type { UserProfile } from "@/types/entities";
 
 export function ChatFloatingWidget() {
   const pathname = usePathname();
+  const router = useRouter();
   const { user, isAuthenticated, isAdmin } = useAuthUser();
+  const { unreadCount, markConversationAsRead } = useChatNotifications();
   const [isOpen, setIsOpen] = useState(false);
   const [adminContact, setAdminContact] = useState<UserProfile | null>(null);
 
@@ -34,6 +37,21 @@ export function ChatFloatingWidget() {
       isMounted = false;
     };
   }, [isAuthenticated, isAdmin]);
+
+  // Se o cliente abriu a janelinha do anfitrião, marca mensagens como lidas
+  useEffect(() => {
+    if (isOpen && adminContact?.id) {
+      markConversationAsRead(adminContact.id);
+    }
+  }, [isOpen, adminContact, markConversationAsRead]);
+
+  function handleButtonClick() {
+    if (isAdmin) {
+      router.push(ROUTES.chat);
+      return;
+    }
+    setIsOpen((prev) => !prev);
+  }
 
   if (isChatPage) return null;
 
@@ -107,14 +125,20 @@ export function ChatFloatingWidget() {
       {/* Botão flutuante de acionamento */}
       <button
         type="button"
-        onClick={() => setIsOpen((prev) => !prev)}
-        aria-label={isOpen ? "Fechar chat" : "Abrir chat"}
-        className="group flex size-14 items-center justify-center rounded-full bg-stone-900 text-white shadow-xl transition-transform hover:scale-105 active:scale-95 dark:bg-amber-500 dark:text-stone-950"
+        onClick={handleButtonClick}
+        aria-label={isAdmin ? "Ir para o chat de mensagens" : isOpen ? "Fechar chat" : "Abrir chat"}
+        className="group relative flex size-14 items-center justify-center rounded-full bg-stone-900 text-white shadow-xl transition-transform hover:scale-105 active:scale-95 dark:bg-amber-500 dark:text-stone-950"
       >
         <span className="relative">
           <ChatIcon className="size-6" />
-          {!isOpen && (
-            <span className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-stone-900 bg-amber-400 dark:border-amber-500 dark:bg-stone-900" />
+          {unreadCount > 0 ? (
+            <span className="absolute -top-3 -right-3 flex min-w-5 h-5 items-center justify-center rounded-full bg-red-600 px-1 text-[11px] font-black text-white shadow-lg animate-bounce">
+              {unreadCount}
+            </span>
+          ) : (
+            !isOpen && (
+              <span className="absolute -top-1 -right-1 size-3 rounded-full border-2 border-stone-900 bg-amber-400 dark:border-amber-500 dark:bg-stone-900" />
+            )
           )}
         </span>
       </button>

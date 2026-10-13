@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ChatFloatingWidget } from "@/components/chat/ChatFloatingWidget";
+import { ChatNotificationProvider } from "@/context/ChatNotificationContext";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -31,10 +32,12 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
       className={`${geistSans.variable} ${geistMono.variable} h-full scroll-smooth antialiased`}
     >
       <body className="min-h-full flex flex-col">
-        <SiteHeader />
-        {/* Cada página/layout define seu próprio <main> (e rodapé, quando houver). */}
-        <div className="flex flex-1 flex-col">{children}</div>
-        <ChatFloatingWidget />
+        <ChatNotificationProvider>
+          <SiteHeader />
+          {/* Cada página/layout define seu próprio <main> (e rodapé, quando houver). */}
+          <div className="flex flex-1 flex-col">{children}</div>
+          <ChatFloatingWidget />
+        </ChatNotificationProvider>
       </body>
     </html>
   );

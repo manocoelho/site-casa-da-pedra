@@ -3,10 +3,12 @@
 import Link from "next/link";
 import { Button } from "@/components/ui/Button";
 import { useAuthUser } from "@/hooks/useAuthUser";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { ROUTES } from "@/lib/routes";
 
 export function SiteHeader() {
   const { profile, user, isLoading, isAuthenticated, isAdmin, signOut } = useAuthUser();
+  const { unreadCount } = useChatNotifications();
   const displayName = profile?.nome ?? user?.email ?? "";
 
   return (
@@ -26,9 +28,15 @@ export function SiteHeader() {
               </span>
               <Link
                 href={ROUTES.chat}
-                className="rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                className="relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
               >
-                Chat
+                <span>Chat</span>
+                {unreadCount > 0 && (
+                  <span className="flex items-center gap-1 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-extrabold text-stone-950 shadow-2xs animate-pulse">
+                    <span className="size-1.5 rounded-full bg-stone-950" />
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
               {isAdmin && (
                 <Link

@@ -1,5 +1,8 @@
+"use client";
+
 import Link from "next/link";
-import { ExternalLinkIcon, ShieldIcon } from "@/components/ui/icons";
+import { ChatIcon, ExternalLinkIcon, ShieldIcon } from "@/components/ui/icons";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { ROUTES } from "@/lib/routes";
 
 interface AdminHeaderProps {
@@ -8,6 +11,7 @@ interface AdminHeaderProps {
 }
 
 export function AdminHeader({ userEmail, userName }: AdminHeaderProps) {
+  const { unreadCount } = useChatNotifications();
   const displayName = userName || userEmail || "Administrador";
 
   return (
@@ -31,6 +35,19 @@ export function AdminHeader({ userEmail, userName }: AdminHeaderProps) {
           <span className="hidden text-xs text-stone-500 sm:inline dark:text-stone-400">
             Logado como <strong className="text-stone-700 dark:text-stone-200">{displayName}</strong>
           </span>
+
+          <Link
+            href={ROUTES.chat}
+            className="inline-flex items-center gap-1.5 rounded-lg border border-stone-200 bg-stone-50 px-3 py-1.5 text-xs font-medium text-stone-700 transition hover:bg-stone-100 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700"
+          >
+            <ChatIcon className="size-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Chat</span>
+            {unreadCount > 0 && (
+              <span className="flex items-center gap-1 rounded-full bg-amber-500 px-1.5 py-0.2 text-[10px] font-extrabold text-stone-950 shadow-2xs animate-pulse">
+                {unreadCount}
+              </span>
+            )}
+          </Link>
 
           <Link
             href={ROUTES.home}

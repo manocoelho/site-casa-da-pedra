@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { getBrowserMessagesService } from "@/services/messages";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { ChatSidebar } from "@/components/chat/ChatSidebar";
 import { ChatWindow } from "@/components/chat/ChatWindow";
 import { ChatIcon } from "@/components/ui/icons";
@@ -21,6 +23,7 @@ export function ChatLayout({
   adminContact,
   targetInterlocutorId,
 }: ChatLayoutProps) {
+  const { setActiveConversationId, markConversationAsRead } = useChatNotifications();
   const [conversations, setConversations] = useState<ChatConversation[]>(initialConversations);
   const isAdmin = currentUser.role === "admin";
 
@@ -34,18 +37,52 @@ export function ChatLayout({
     defaultSelectedId,
   );
 
-  // Recarrega lista de conversas
+  // Sincroniza conversa ativa com o contexto de notificações e marca como lida
+  useEffect(() => {
+    setActiveConversationId(activeInterlocutorId || null);
+    if (activeInterlocutorId) {
+      markConversationAsRead(activeInterlocutorId);
+    }
+    return () => {
+      setActiveConversationId(null);
+    };
+  }, [activeInterlocutorId, setActiveConversationId, markConversationAsRead]);
+
+  // Recarrega lista de conversas inicialmente e sempre que houver novas mensagens via Realtime
   useEffect(() => {
     let isMounted = true;
-    getBrowserMessagesService()
-      .listConversations(currentUser.id)
-      .then((list) => {
-        if (isMounted) setConversations(list);
-      })
-      .catch((err) => console.error("[ChatLayout] Erro ao listar conversas:", err));
+    const messagesService = getBrowserMessagesService();
+
+    function refresh() {
+      messagesService
+        .listConversations(currentUser.id)
+        .then((list) => {
+          if (isMounted) setConversations(list);
+        })
+        .catch((err) => console.error("[ChatLayout] Erro ao listar conversas:", err));
+    }
+
+    refresh();
+
+    const supabase = createSupabaseBrowserClient();
+    const channel = supabase
+      .channel(`chat-sidebar-sync:${currentUser.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "messages",
+        },
+        () => {
+          refresh();
+        },
+      )
+      .subscribe();
 
     return () => {
       isMounted = false;
+      supabase.removeChannel(channel);
     };
   }, [currentUser.id]);
 

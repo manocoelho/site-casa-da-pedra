@@ -1,9 +1,11 @@
 "use client";
 
+import { useEffect } from "react";
 import { Alert } from "@/components/ui/Alert";
 import { ChevronLeftIcon, ShieldIcon } from "@/components/ui/icons";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { useChat } from "@/hooks/useChat";
 
 interface ChatWindowProps {
@@ -23,11 +25,19 @@ export function ChatWindow({
   onBack,
   className = "",
 }: ChatWindowProps) {
+  const { markConversationAsRead } = useChatNotifications();
+
   // O componente consome estritamente o hook useChat (SRP)
   const { messages, isLoading, isSending, error, sendMessage } = useChat(
     userId,
     receiverId,
   );
+
+  useEffect(() => {
+    if (receiverId && messages.length > 0) {
+      markConversationAsRead(receiverId);
+    }
+  }, [receiverId, messages.length, markConversationAsRead]);
 
   const initial = interlocutorName.charAt(0).toUpperCase() || "?";
 

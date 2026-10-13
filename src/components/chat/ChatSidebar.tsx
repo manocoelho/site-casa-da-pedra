@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { SearchIcon, ShieldIcon, UserIcon } from "@/components/ui/icons";
+import { useChatNotifications } from "@/context/ChatNotificationContext";
 import type { ChatConversation } from "@/types/chat";
 import type { UserProfile } from "@/types/entities";
 
@@ -24,6 +25,7 @@ export function ChatSidebar({
   isAdmin,
   className = "",
 }: ChatSidebarProps) {
+  const { unreadBySender } = useChatNotifications();
   const [search, setSearch] = useState("");
 
   const filtered = useMemo(() => {
@@ -131,6 +133,7 @@ export function ChatSidebar({
             {filtered.map((conv) => {
               const isSelected = activeInterlocutorId === conv.interlocutorId;
               const initial = conv.interlocutorNome.charAt(0).toUpperCase() || "?";
+              const unread = unreadBySender[conv.interlocutorId] || 0;
 
               return (
                 <li key={conv.interlocutorId}>
@@ -144,31 +147,61 @@ export function ChatSidebar({
                     }`}
                   >
                     {/* Avatar */}
-                    <div
-                      className={`flex size-11 shrink-0 items-center justify-center rounded-full font-bold text-sm ${
-                        conv.interlocutorRole === "admin"
-                          ? "bg-amber-500 text-stone-950"
-                          : "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
-                      }`}
-                    >
-                      {initial}
+                    <div className="relative shrink-0">
+                      <div
+                        className={`flex size-11 items-center justify-center rounded-full font-bold text-sm ${
+                          conv.interlocutorRole === "admin"
+                            ? "bg-amber-500 text-stone-950"
+                            : "bg-stone-200 text-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                        }`}
+                      >
+                        {initial}
+                      </div>
+                      {unread > 0 && (
+                        <span className="absolute -top-0.5 -right-0.5 size-3.5 rounded-full border-2 border-white bg-amber-500 dark:border-stone-900 animate-pulse" />
+                      )}
                     </div>
 
                     {/* Dados da conversa */}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center justify-between gap-1">
-                        <span className="truncate text-xs font-semibold text-stone-900 dark:text-stone-100">
+                        <span
+                          className={`truncate text-xs ${
+                            unread > 0
+                              ? "font-bold text-stone-950 dark:text-white"
+                              : "font-semibold text-stone-900 dark:text-stone-100"
+                          }`}
+                        >
                           {conv.interlocutorNome}
                         </span>
-                        {conv.ultimoTimestamp && (
-                          <span className="shrink-0 text-[10px] text-stone-400">
-                            {formatTime(conv.ultimoTimestamp)}
-                          </span>
-                        )}
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {conv.ultimoTimestamp && (
+                            <span
+                              className={`text-[10px] ${
+                                unread > 0
+                                  ? "font-semibold text-amber-600 dark:text-amber-400"
+                                  : "text-stone-400"
+                              }`}
+                            >
+                              {formatTime(conv.ultimoTimestamp)}
+                            </span>
+                          )}
+                          {unread > 0 && (
+                            <span className="flex min-w-4.5 h-4.5 items-center justify-center rounded-full bg-amber-500 px-1 text-[10px] font-black text-stone-950 shadow-2xs">
+                              {unread}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       <div className="mt-0.5 flex items-center justify-between gap-2">
-                        <p className="truncate text-xs text-stone-500 dark:text-stone-400">
+                        <p
+                          className={`truncate text-xs ${
+                            unread > 0
+                              ? "font-semibold text-stone-900 dark:text-stone-100"
+                              : "text-stone-500 dark:text-stone-400"
+                          }`}
+                        >
                           {conv.ultimoConteudo || "Conversa iniciada"}
                         </p>
                         {conv.interlocutorRole === "admin" && (
