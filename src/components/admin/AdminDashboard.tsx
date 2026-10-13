@@ -4,27 +4,43 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FlatPhotoManager } from "@/components/admin/FlatPhotoManager";
 import { FlatEditModal } from "@/components/admin/FlatEditModal";
+import { FlatCreateModal } from "@/components/admin/FlatCreateModal";
 import { AdminReservationsManager } from "@/components/admin/AdminReservationsManager";
-import { CalendarIcon, ImageIcon, PencilIcon, UsersIcon } from "@/components/ui/icons";
+import { AdminSiteContentManager } from "@/components/admin/AdminSiteContentManager";
+import {
+  CalendarIcon,
+  ImageIcon,
+  PencilIcon,
+  PlusIcon,
+  TrashIcon,
+  UsersIcon,
+} from "@/components/ui/icons";
 import { formatCurrency, formatGuests } from "@/lib/format";
+import { getBrowserFlatsService } from "@/services/flats";
+import { revalidateFlatsCache } from "@/app/admin/actions";
+import { defaultSiteSettings } from "@/services/siteSettings";
 import type { Flat, FlatPhoto, FlatWithPhotos } from "@/types/entities";
 import type { AdminReservation } from "@/types/reservations";
+import type { SiteSettingsData } from "@/types/siteSettings";
 
 interface AdminDashboardProps {
   initialFlats: FlatWithPhotos[];
   initialReservations?: AdminReservation[];
+  initialSiteSettings?: SiteSettingsData;
 }
 
 export function AdminDashboard({
   initialFlats,
   initialReservations = [],
+  initialSiteSettings = defaultSiteSettings,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"reservas" | "flats">("reservas");
+  const [activeTab, setActiveTab] = useState<"reservas" | "flats" | "conteudo">("reservas");
   const [flats, setFlats] = useState<FlatWithPhotos[]>(initialFlats);
   const [selectedFlatId, setSelectedFlatId] = useState<string>(
     initialFlats[0]?.id || "",
   );
   const [isEditingFlat, setIsEditingFlat] = useState(false);
+  const [isCreatingFlat, setIsCreatingFlat] = useState(false);
 
   const activeFlat = useMemo(
     () => flats.find((f) => f.id === selectedFlatId) || flats[0] || null,
@@ -79,6 +95,36 @@ export function AdminDashboard({
     );
   }
 
+  function handleFlatCreated(newFlat: FlatWithPhotos) {
+    setFlats((prev) => [...prev, newFlat]);
+    setSelectedFlatId(newFlat.id);
+  }
+
+  async function handleDeleteFlat(flatId: string, titulo: string) {
+    if (
+      !window.confirm(
+        `Tem certeza que deseja excluir o flat "${titulo}"? Todas as fotos e reservas associadas serão removidas permanentemente.`,
+      )
+    ) {
+      return;
+    }
+
+    try {
+      const flatsService = getBrowserFlatsService();
+      await flatsService.delete(flatId);
+      await revalidateFlatsCache();
+      setFlats((prev) => {
+        const filtered = prev.filter((f) => f.id !== flatId);
+        if (selectedFlatId === flatId) {
+          setSelectedFlatId(filtered[0]?.id || "");
+        }
+        return filtered;
+      });
+    } catch (err) {
+      alert(err instanceof Error ? err.message : "Erro ao excluir flat.");
+    }
+  }
+
   return (
     <div className="flex flex-col gap-8 pb-16">
       {/* Cabeçalho do Dashboard */}
@@ -130,10 +176,25 @@ export function AdminDashboard({
             {flats.length}
           </span>
         </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("conteudo")}
+          className={`relative inline-flex items-center gap-2.5 border-b-2 px-6 py-3.5 text-sm font-semibold transition ${
+            activeTab === "conteudo"
+              ? "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400"
+              : "border-transparent text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
+          }`}
+        >
+          <PencilIcon className="size-4" />
+          <span>Página Inicial & Capa</span>
+        </button>
       </div>
 
       {activeTab === "reservas" ? (
         <AdminReservationsManager initialReservations={initialReservations} />
+      ) : activeTab === "conteudo" ? (
+        <AdminSiteContentManager initialSettings={initialSiteSettings} />
       ) : (
         <div className="flex flex-col gap-8">
           {/* Cards de Métricas */}
@@ -177,38 +238,56 @@ export function AdminDashboard({
 
       {flats.length === 0 ? (
         <div className="rounded-3xl border border-dashed border-stone-300 p-12 text-center text-stone-500 dark:border-stone-800">
-          Nenhum flat encontrado no banco de dados. Execute a migration de seed para cadastrar os flats iniciais.
+          <p>Nenhum flat cadastrado no banco de dados.</p>
+          <Button
+            variant="primary"
+            className="mt-4"
+            leftIcon={<PlusIcon className="size-4" />}
+            onClick={() => setIsCreatingFlat(true)}
+          >
+            Cadastrar primeiro flat
+          </Button>
         </div>
       ) : (
         <>
-          {/* Seletor de Flats (Tabs) */}
-          <div className="flex flex-wrap items-center gap-2 border-b border-stone-200 pb-3 dark:border-stone-800">
-            {flats.map((flat) => {
-              const isSelected = activeFlat?.id === flat.id;
-              return (
-                <button
-                  key={flat.id}
-                  type="button"
-                  onClick={() => setSelectedFlatId(flat.id)}
-                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
-                    isSelected
-                      ? "bg-stone-900 text-white shadow-xs dark:bg-amber-500 dark:text-stone-950"
-                      : "bg-white text-stone-700 hover:bg-stone-100 hover:text-stone-900 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
-                  }`}
-                >
-                  <span>{flat.titulo}</span>
-                  <span
-                    className={`rounded-full px-2 py-0.5 text-xs ${
+          {/* Seletor de Flats (Tabs) + Botão de Novo Flat */}
+          <div className="flex flex-wrap items-center justify-between gap-3 border-b border-stone-200 pb-3 dark:border-stone-800">
+            <div className="flex flex-wrap items-center gap-2">
+              {flats.map((flat) => {
+                const isSelected = activeFlat?.id === flat.id;
+                return (
+                  <button
+                    key={flat.id}
+                    type="button"
+                    onClick={() => setSelectedFlatId(flat.id)}
+                    className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-sm font-semibold transition ${
                       isSelected
-                        ? "bg-white/20 text-white dark:bg-stone-950/20 dark:text-stone-950"
-                        : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                        ? "bg-stone-900 text-white shadow-xs dark:bg-amber-500 dark:text-stone-950"
+                        : "bg-white text-stone-700 hover:bg-stone-100 hover:text-stone-900 dark:bg-stone-900 dark:text-stone-300 dark:hover:bg-stone-800"
                     }`}
                   >
-                    {flat.flat_photos.length} fotos
-                  </span>
-                </button>
-              );
-            })}
+                    <span>{flat.titulo}</span>
+                    <span
+                      className={`rounded-full px-2 py-0.5 text-xs ${
+                        isSelected
+                          ? "bg-white/20 text-white dark:bg-stone-950/20 dark:text-stone-950"
+                          : "bg-stone-100 text-stone-600 dark:bg-stone-800 dark:text-stone-400"
+                      }`}
+                    >
+                      {flat.flat_photos.length} fotos
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+
+            <Button
+              variant="primary"
+              leftIcon={<PlusIcon className="size-4" />}
+              onClick={() => setIsCreatingFlat(true)}
+            >
+              Novo Flat
+            </Button>
           </div>
 
           {activeFlat && (
@@ -239,13 +318,23 @@ export function AdminDashboard({
                     </p>
                   </div>
 
-                  <Button
-                    variant="outline"
-                    leftIcon={<PencilIcon className="size-4" />}
-                    onClick={() => setIsEditingFlat(true)}
-                  >
-                    Editar informações
-                  </Button>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button
+                      variant="outline"
+                      leftIcon={<PencilIcon className="size-4" />}
+                      onClick={() => setIsEditingFlat(true)}
+                    >
+                      Editar informações
+                    </Button>
+                    <Button
+                      variant="outline"
+                      className="text-red-600 hover:bg-red-50 hover:border-red-200 dark:text-red-400 dark:hover:bg-red-950/40"
+                      leftIcon={<TrashIcon className="size-4" />}
+                      onClick={() => handleDeleteFlat(activeFlat.id, activeFlat.titulo)}
+                    >
+                      Excluir flat
+                    </Button>
+                  </div>
                 </div>
               </div>
 
@@ -265,6 +354,13 @@ export function AdminDashboard({
               />
             </div>
           )}
+
+          {/* Modal de Criação de Novo Flat */}
+          <FlatCreateModal
+            isOpen={isCreatingFlat}
+            onClose={() => setIsCreatingFlat(false)}
+            onCreated={handleFlatCreated}
+          />
         </>
       )}
         </div>

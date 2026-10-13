@@ -49,8 +49,8 @@ export const siteConfig: SiteConfig = {
   },
   // TODO: substituir pelos contatos reais.
   contact: {
-    whatsapp: "5583900000000",
-    instagram: "casadapedra.bananeiras",
+    whatsapp: "5583999262031",
+    instagram: "flatcasadapedra",
     email: "contato@casadapedra.com.br",
   },
 };

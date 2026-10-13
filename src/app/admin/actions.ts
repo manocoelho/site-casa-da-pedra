@@ -16,3 +16,15 @@ export async function revalidateFlatsCache() {
     console.error("[revalidateFlatsCache]", error);
   }
 }
+
+/**
+ * Invalida o cache da página inicial quando textos ou imagem de capa forem alterados.
+ */
+export async function revalidateSiteContent() {
+  try {
+    revalidatePath("/");
+    revalidatePath("/admin");
+  } catch (error) {
+    console.error("[revalidateSiteContent]", error);
+  }
+}

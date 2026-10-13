@@ -1,0 +1,440 @@
+"use client";
+
+import { useState, type ChangeEvent } from "react";
+import Image from "next/image";
+import { Alert } from "@/components/ui/Alert";
+import { Button } from "@/components/ui/Button";
+import { TextField } from "@/components/ui/TextField";
+import { CheckIcon, ImageIcon, MapPinIcon, PlusIcon } from "@/components/ui/icons";
+import { getBrowserSiteSettingsService } from "@/services/siteSettings";
+import { getBrowserStorageService, validatePhotoFile } from "@/services/storage";
+import { revalidateSiteContent } from "@/app/admin/actions";
+import type { SiteSettingsData } from "@/types/siteSettings";
+
+interface AdminSiteContentManagerProps {
+  initialSettings: SiteSettingsData;
+  className?: string;
+}
+
+export function AdminSiteContentManager({
+  initialSettings,
+  className = "",
+}: AdminSiteContentManagerProps) {
+  const [settings, setSettings] = useState<SiteSettingsData>(initialSettings);
+  const [newHighlight, setNewHighlight] = useState("");
+  const [isUploadingCover, setIsUploadingCover] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [isSaving, setIsSaving] = useState(false);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  // Manipulação de imagem de capa
+  async function handleCoverFileChange(e: ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const validation = validatePhotoFile(file);
+    if (!validation.valid) {
+      setErrorMessage(validation.error || "Arquivo de foto inválido.");
+      return;
+    }
+
+    setErrorMessage(null);
+    setSuccessMessage(null);
+    setIsUploadingCover(true);
+    setUploadProgress(10);
+
+    try {
+      const storage = getBrowserStorageService();
+      const ext = file.name.split(".").pop()?.toLowerCase() || "jpg";
+      const storagePath = `hero/capa-${Date.now()}.${ext}`;
+
+      const result = await storage.uploadFile(file, storagePath, {
+        onProgress: (p) => setUploadProgress(p),
+      });
+
+      if (!result.ok) {
+        throw new Error(result.error);
+      }
+
+      setSettings((prev) => ({
+        ...prev,
+        cover_image_url: result.data.publicUrl,
+      }));
+
+      setSuccessMessage("Nova foto de capa carregada! Lembre-se de clicar em 'Salvar Alterações' abaixo.");
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Erro ao enviar foto de capa.");
+    } finally {
+      setIsUploadingCover(false);
+      setUploadProgress(0);
+      e.target.value = "";
+    }
+  }
+
+  function handleResetCover() {
+    setSettings((prev) => ({
+      ...prev,
+      cover_image_url: "/images/hero-casa-da-pedra.jpg",
+    }));
+    setSuccessMessage("Foto de capa resetada para a padrão original.");
+  }
+
+  // Adicionar e remover destaques/tags
+  function handleAddHighlight() {
+    const trimmed = newHighlight.trim();
+    if (!trimmed) return;
+    if (settings.highlights.includes(trimmed)) {
+      setErrorMessage("Este destaque já foi adicionado.");
+      return;
+    }
+    setSettings((prev) => ({
+      ...prev,
+      highlights: [...prev.highlights, trimmed],
+    }));
+    setNewHighlight("");
+  }
+
+  function handleRemoveHighlight(indexToRemove: number) {
+    setSettings((prev) => ({
+      ...prev,
+      highlights: prev.highlights.filter((_, idx) => idx !== indexToRemove),
+    }));
+  }
+
+  // Salvar no banco de dados
+  async function handleSaveSettings() {
+    setIsSaving(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const service = getBrowserSiteSettingsService();
+      const res = await service.updateSettings(settings);
+
+      if (!res.ok) {
+        throw new Error(res.error || "Não foi possível salvar no banco de dados.");
+      }
+
+      await revalidateSiteContent();
+      setSuccessMessage("Configurações e textos da página inicial atualizados com sucesso!");
+    } catch (err) {
+      setErrorMessage(err instanceof Error ? err.message : "Erro ao salvar alterações.");
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  return (
+    <div className={`flex flex-col gap-8 pb-12 ${className}`}>
+      {/* Cabeçalho */}
+      <div>
+        <h2 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl dark:text-stone-50">
+          Personalização da Página Inicial
+        </h2>
+        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+          Altere a foto da capa principal, títulos, subtítulos, botões e contatos institucionais do site.
+        </p>
+      </div>
+
+      {successMessage && <Alert variant="success">{successMessage}</Alert>}
+      {errorMessage && (
+        <div className="flex flex-col gap-2">
+          <Alert variant="error">{errorMessage}</Alert>
+          {errorMessage.includes("site_settings") && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="font-semibold">Instrução para criar a tabela no Supabase:</p>
+              <p className="mt-1">
+                Execute o script de migration <code>supabase/migrations/20261013000000_site_settings.sql</code> no <strong>SQL Editor</strong> do painel do seu Supabase.
+              </p>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* Grid com Formulário de Edição e Prévia ao Vivo */}
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-12">
+        {/* Coluna de Configuração (7 colunas) */}
+        <div className="flex flex-col gap-6 lg:col-span-7">
+          {/* Seção 1: Foto da Capa */}
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center gap-2 text-stone-900 dark:text-stone-50">
+              <ImageIcon className="size-5 text-amber-600 dark:text-amber-400" />
+              <h3 className="text-base font-bold">Foto da Capa (Hero Cover)</h3>
+            </div>
+            <p className="mt-1 text-xs text-stone-500">
+              A imagem de fundo com efeito escurecido exibida no topo da página inicial (JPG, PNG, WebP até 5MB).
+            </p>
+
+            <div className="mt-4 flex flex-col gap-4 sm:flex-row sm:items-center">
+              {/* Thumbnail da capa */}
+              <div className="relative h-32 w-full sm:w-48 overflow-hidden rounded-2xl border border-stone-200 bg-stone-100 dark:border-stone-800 dark:bg-stone-800">
+                <Image
+                  src={settings.cover_image_url}
+                  alt="Capa da Home"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+
+              {/* Ações de Upload */}
+              <div className="flex flex-1 flex-col gap-2">
+                <label className="relative inline-flex h-10 cursor-pointer items-center justify-center rounded-xl bg-amber-500 px-4 text-xs font-semibold text-stone-950 transition hover:bg-amber-400">
+                  <span>{isUploadingCover ? "Enviando imagem..." : "Substituir foto de capa"}</span>
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/avif"
+                    onChange={handleCoverFileChange}
+                    disabled={isUploadingCover}
+                    className="sr-only"
+                  />
+                </label>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleResetCover}
+                  className="text-xs"
+                >
+                  Restaurar foto padrão
+                </Button>
+
+                {isUploadingCover && (
+                  <div className="mt-1 flex items-center gap-2">
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200 dark:bg-stone-800">
+                      <div
+                        className="h-full bg-amber-500 transition-all duration-200"
+                        style={{ width: `${uploadProgress}%` }}
+                      />
+                    </div>
+                    <span className="text-[10px] text-stone-500">{uploadProgress}%</span>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 2: Textos Principais */}
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
+              Textos da Seção Principal
+            </h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Personalize o título, slogan e etiqueta exibidos sobre a capa.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-4">
+              <TextField
+                label="Etiqueta / Localização"
+                name="eyebrow"
+                value={settings.eyebrow}
+                onChange={(e) => setSettings((s) => ({ ...s, eyebrow: e.target.value }))}
+                placeholder="Ex.: Bananeiras · Paraíba"
+              />
+
+              <TextField
+                label="Título Principal"
+                name="title"
+                value={settings.title}
+                onChange={(e) => setSettings((s) => ({ ...s, title: e.target.value }))}
+                placeholder="Ex.: Casa da Pedra"
+              />
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="home-slogan"
+                  className="text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  Slogan / Subtítulo
+                </label>
+                <textarea
+                  id="home-slogan"
+                  rows={3}
+                  value={settings.slogan}
+                  onChange={(e) => setSettings((s) => ({ ...s, slogan: e.target.value }))}
+                  className="rounded-lg border border-stone-300 bg-white p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-500 focus:outline-hidden focus:ring-2 focus:ring-stone-200 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  placeholder="Ex.: Seu refúgio de pedra e aconchego no friozinho da serra paraibana."
+                />
+              </div>
+
+              <TextField
+                label="Texto do Botão de Ação"
+                name="cta_label"
+                value={settings.cta_label}
+                onChange={(e) => setSettings((s) => ({ ...s, cta_label: e.target.value }))}
+                placeholder="Ex.: Ver Disponibilidade"
+              />
+
+              {/* Gerenciamento de Tags / Destaques */}
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-medium text-stone-700 dark:text-stone-300">
+                  Destaques (Itens abaixo do botão)
+                </label>
+                <div className="flex flex-wrap gap-2">
+                  {settings.highlights.map((item, idx) => (
+                    <span
+                      key={item}
+                      className="inline-flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1 text-xs text-stone-700 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-300"
+                    >
+                      <span>{item}</span>
+                      <button
+                        type="button"
+                        onClick={() => handleRemoveHighlight(idx)}
+                        className="text-stone-400 hover:text-red-500"
+                        title="Remover destaque"
+                      >
+                        ✕
+                      </button>
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-2 flex gap-2">
+                  <input
+                    type="text"
+                    value={newHighlight}
+                    onChange={(e) => setNewHighlight(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        handleAddHighlight();
+                      }
+                    }}
+                    placeholder="Adicionar novo diferencial..."
+                    className="flex-1 rounded-xl border border-stone-200 bg-stone-50 px-3 py-2 text-xs text-stone-900 placeholder:text-stone-400 focus:border-amber-500 focus:bg-white focus:outline-hidden dark:border-stone-800 dark:bg-stone-950 dark:text-stone-100"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleAddHighlight}
+                    leftIcon={<PlusIcon className="size-3.5" />}
+                    className="text-xs"
+                  >
+                    Adicionar
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 3: Informações de Contato e Redes */}
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
+              Contatos e Redes Sociais
+            </h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Utilizados no rodapé e botões de contato direto.
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                label="WhatsApp (com DDI e DDD)"
+                name="whatsapp"
+                value={settings.whatsapp}
+                onChange={(e) => setSettings((s) => ({ ...s, whatsapp: e.target.value }))}
+                placeholder="5583900000000"
+              />
+
+              <TextField
+                label="Instagram (usuário)"
+                name="instagram"
+                value={settings.instagram}
+                onChange={(e) => setSettings((s) => ({ ...s, instagram: e.target.value }))}
+                placeholder="flatcasadapedra"
+              />
+
+              <div className="sm:col-span-2">
+                <TextField
+                  label="E-mail de Contato"
+                  name="email"
+                  type="email"
+                  value={settings.email}
+                  onChange={(e) => setSettings((s) => ({ ...s, email: e.target.value }))}
+                  placeholder="contato@casadapedra.com.br"
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Botão de Salvar */}
+          <div className="flex justify-end gap-3">
+            <Button
+              type="button"
+              variant="primary"
+              isLoading={isSaving}
+              onClick={handleSaveSettings}
+              leftIcon={<CheckIcon className="size-4" />}
+            >
+              Salvar Alterações da Página Inicial
+            </Button>
+          </div>
+        </div>
+
+        {/* Coluna da Prévia Visual ao Vivo (5 colunas) */}
+        <div className="flex flex-col gap-4 lg:col-span-5">
+          <div className="sticky top-20 rounded-3xl border border-stone-200 bg-white p-5 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <div className="flex items-center justify-between pb-3 border-b border-stone-100 dark:border-stone-800">
+              <span className="text-xs font-bold text-stone-900 uppercase tracking-wider dark:text-stone-100">
+                Prévia ao Vivo
+              </span>
+              <span className="rounded-full bg-emerald-100 px-2 py-0.5 text-[10px] font-semibold text-emerald-800 dark:bg-emerald-900/40 dark:text-emerald-300">
+                Simulador da Home
+              </span>
+            </div>
+
+            {/* Mockup da Hero Section */}
+            <div className="relative mt-4 h-[440px] w-full overflow-hidden rounded-2xl bg-stone-950 flex flex-col justify-end p-6 text-white shadow-inner">
+              {/* Imagem de Capa com overlays */}
+              <Image
+                src={settings.cover_image_url}
+                alt="Prévia da Capa"
+                fill
+                className="object-cover -z-20"
+              />
+              <div className="absolute inset-0 -z-10 bg-gradient-to-t from-stone-950/95 via-stone-950/50 to-stone-950/20" />
+
+              {/* Eyebrow */}
+              <div>
+                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-200 backdrop-blur">
+                  <MapPinIcon className="size-3" />
+                  {settings.eyebrow || "Localização"}
+                </span>
+              </div>
+
+              {/* Título */}
+              <h4 className="mt-3 text-3xl font-bold tracking-tight text-white leading-tight">
+                {settings.title || "Título da Casa"}
+              </h4>
+
+              {/* Slogan */}
+              <p className="mt-2 text-xs text-stone-200 line-clamp-3 leading-relaxed">
+                {settings.slogan || "Slogan e subtítulo da Casa da Pedra..."}
+              </p>
+
+              {/* Botão */}
+              <div className="mt-4 flex flex-col gap-3">
+                <div className="inline-flex h-10 w-fit items-center justify-center rounded-full bg-amber-500 px-5 text-xs font-bold text-stone-950 shadow-md">
+                  {settings.cta_label || "Ver Disponibilidade"}
+                </div>
+
+                {/* Highlights */}
+                <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-stone-300">
+                  {settings.highlights.slice(0, 3).map((h) => (
+                    <li key={h} className="flex items-center gap-1">
+                      <span className="size-1 rounded-full bg-amber-400" />
+                      {h}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            <p className="mt-3 text-center text-[11px] text-stone-500">
+              As alterações salvas são refletidas instantaneamente na página inicial pública.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

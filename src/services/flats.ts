@@ -2,7 +2,7 @@ import {
   createSupabaseBrowserClient,
   type TypedSupabaseClient,
 } from "@/lib/supabase/client";
-import type { Flat, FlatPhoto, FlatUpdate, FlatWithPhotos } from "@/types/entities";
+import type { Flat, FlatInsert, FlatPhoto, FlatUpdate, FlatWithPhotos } from "@/types/entities";
 
 export const FLATS_CACHE_TAG = "flats";
 
@@ -65,6 +65,39 @@ export function createFlatsService(supabase: TypedSupabaseClient) {
         throw new Error(`Falha ao atualizar flat: ${error.message}`);
       }
       return data;
+    },
+
+    /**
+     * Cadastra um novo flat no banco de dados.
+     */
+    async create(values: FlatInsert): Promise<Flat> {
+      const { data, error } = await supabase
+        .from("flats")
+        .insert(values)
+        .select("*")
+        .single();
+
+      if (error) {
+        console.error("[flats] create:", error.message);
+        throw new Error(`Falha ao cadastrar flat: ${error.message}`);
+      }
+      return data;
+    },
+
+    /**
+     * Remove um flat e suas fotos associadas.
+     */
+    async delete(id: string): Promise<boolean> {
+      const { error } = await supabase
+        .from("flats")
+        .delete()
+        .eq("id", id);
+
+      if (error) {
+        console.error(`[flats] delete ${id}:`, error.message);
+        throw new Error(`Falha ao excluir flat: ${error.message}`);
+      }
+      return true;
     },
 
     /**

@@ -4,6 +4,7 @@ import { FlatList } from "@/components/flats/FlatList";
 import { Footer } from "@/components/layout/Footer";
 import { siteConfig } from "@/config/site";
 import { getFeaturedFlats } from "@/services/flats.server";
+import { getPublicSiteSettings } from "@/services/siteSettings";
 
 export const metadata: Metadata = {
   title: { absolute: `${siteConfig.name} · Flats em ${siteConfig.location}` },
@@ -17,24 +18,50 @@ export const metadata: Metadata = {
   },
 };
 
+export const instant = false;
+
 /**
  * Landing page (Server Component).
- * Responsável apenas por buscar os dados e repassá-los como props aos componentes.
+ * Responsável por buscar os flats e as configurações dinâmicas da página inicial.
  */
 export default async function Home() {
-  const flats = await getFeaturedFlats(2);
+  const [flats, settings] = await Promise.all([
+    getFeaturedFlats(12),
+    getPublicSiteSettings(),
+  ]);
+
+  const heroData = {
+    eyebrow: settings.eyebrow,
+    title: settings.title,
+    slogan: settings.slogan,
+    image: {
+      src: settings.cover_image_url,
+      alt: settings.cover_image_alt,
+    },
+    cta: {
+      label: settings.cta_label,
+      href: settings.cta_href,
+    },
+    highlights: settings.highlights,
+  };
+
+  const contactData = {
+    whatsapp: settings.whatsapp,
+    instagram: settings.instagram,
+    email: settings.email,
+  };
 
   return (
     <>
       <main className="flex flex-1 flex-col">
-        <HeroSection {...siteConfig.hero} />
-        <FlatList flats={flats} whatsapp={siteConfig.contact.whatsapp} />
+        <HeroSection {...heroData} />
+        <FlatList flats={flats} whatsapp={contactData.whatsapp} />
       </main>
       <Footer
-        name={siteConfig.name}
-        location={siteConfig.location}
-        description={siteConfig.description}
-        contact={siteConfig.contact}
+        name={settings.title}
+        location={settings.eyebrow}
+        description={settings.slogan}
+        contact={contactData}
       />
     </>
   );
