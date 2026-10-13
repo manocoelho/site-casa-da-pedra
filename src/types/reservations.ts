@@ -16,3 +16,16 @@ export interface ReservationOperationResult<T = Reservation> {
   data?: T;
   error?: string;
 }
+
+export interface AdminReservation extends Reservation {
+  flats?: {
+    id: string;
+    titulo: string;
+    preco_diaria: number;
+  } | null;
+  users?: {
+    id: string;
+    nome: string | null;
+    email: string | null;
+  } | null;
+}

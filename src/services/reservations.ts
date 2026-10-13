@@ -2,8 +2,9 @@ import {
   createSupabaseBrowserClient,
   type TypedSupabaseClient,
 } from "@/lib/supabase/client";
-import type { Reservation } from "@/types/entities";
+import type { Reservation, ReservationStatus } from "@/types/entities";
 import type {
+  AdminReservation,
   CreateReservationInput,
   OccupiedDateRange,
   ReservationOperationResult,
@@ -175,6 +176,57 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         return {
           ok: false,
           error: `Falha ao cancelar reserva: ${error.message}`,
+        };
+      }
+
+      return {
+        ok: true,
+        data,
+      };
+    },
+
+    /**
+     * Lista todas as reservas para o painel administrativo.
+     */
+    async listAllReservations(
+      filterStatus?: ReservationStatus,
+    ): Promise<AdminReservation[]> {
+      let query = supabase
+        .from("reservations")
+        .select("*, flats(id, titulo, preco_diaria), users(id, nome, email)")
+        .order("created_at", { ascending: false });
+
+      if (filterStatus) {
+        query = query.eq("status", filterStatus);
+      }
+
+      const { data, error } = await query;
+      if (error) {
+        console.error("[reservations] listAllReservations error:", error.message);
+        return [];
+      }
+
+      return (data as unknown as AdminReservation[]) || [];
+    },
+
+    /**
+     * Atualiza o status de uma reserva (ex.: 'confirmada', 'concluida', 'cancelada').
+     */
+    async updateReservationStatus(
+      reservationId: string,
+      status: ReservationStatus,
+    ): Promise<ReservationOperationResult<Reservation>> {
+      const { data, error } = await supabase
+        .from("reservations")
+        .update({ status })
+        .eq("id", reservationId)
+        .select("*")
+        .single();
+
+      if (error) {
+        return {
+          ok: false,
+          error: `Falha ao atualizar reserva: ${error.message}`,
         };
       }
 

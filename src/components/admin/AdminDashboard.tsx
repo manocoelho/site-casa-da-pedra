@@ -4,15 +4,22 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import { FlatPhotoManager } from "@/components/admin/FlatPhotoManager";
 import { FlatEditModal } from "@/components/admin/FlatEditModal";
-import { PencilIcon, UsersIcon } from "@/components/ui/icons";
+import { AdminReservationsManager } from "@/components/admin/AdminReservationsManager";
+import { CalendarIcon, ImageIcon, PencilIcon, UsersIcon } from "@/components/ui/icons";
 import { formatCurrency, formatGuests } from "@/lib/format";
 import type { Flat, FlatPhoto, FlatWithPhotos } from "@/types/entities";
+import type { AdminReservation } from "@/types/reservations";
 
 interface AdminDashboardProps {
   initialFlats: FlatWithPhotos[];
+  initialReservations?: AdminReservation[];
 }
 
-export function AdminDashboard({ initialFlats }: AdminDashboardProps) {
+export function AdminDashboard({
+  initialFlats,
+  initialReservations = [],
+}: AdminDashboardProps) {
+  const [activeTab, setActiveTab] = useState<"reservas" | "flats">("reservas");
   const [flats, setFlats] = useState<FlatWithPhotos[]>(initialFlats);
   const [selectedFlatId, setSelectedFlatId] = useState<string>(
     initialFlats[0]?.id || "",
@@ -35,6 +42,10 @@ export function AdminDashboard({ initialFlats }: AdminDashboardProps) {
 
     return { totalFlats, totalPhotos, avgPrice, totalCapacity };
   }, [flats]);
+
+  const pendingReservationsCount = useMemo(() => {
+    return initialReservations.filter((r) => r.status === "pendente").length;
+  }, [initialReservations]);
 
   function handlePhotoAdded(photo: FlatPhoto) {
     if (!activeFlat) return;
@@ -73,16 +84,60 @@ export function AdminDashboard({ initialFlats }: AdminDashboardProps) {
       {/* Cabeçalho do Dashboard */}
       <div>
         <h1 className="text-3xl font-bold tracking-tight text-stone-900 sm:text-4xl dark:text-stone-50">
-          Gerenciamento de Flats
+          Painel de Administração
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-stone-600 dark:text-stone-400">
-          Gerencie fotos, diárias e informações dos flats da Casa da Pedra. As alterações
-          são refletidas automaticamente na vitrine pública.
+          Gerencie as reservas dos hóspedes, fotos e informações dos flats da Casa da Pedra.
         </p>
       </div>
 
-      {/* Cards de Métricas */}
-      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+      {/* Navegação por Abas Principais */}
+      <div className="flex border-b border-stone-200 dark:border-stone-800">
+        <button
+          type="button"
+          onClick={() => setActiveTab("reservas")}
+          className={`relative inline-flex items-center gap-2.5 border-b-2 px-6 py-3.5 text-sm font-semibold transition ${
+            activeTab === "reservas"
+              ? "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400"
+              : "border-transparent text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
+          }`}
+        >
+          <CalendarIcon className="size-4" />
+          <span>Reservas dos Hóspedes</span>
+          {pendingReservationsCount > 0 ? (
+            <span className="inline-flex items-center rounded-full bg-amber-500 px-2 py-0.5 text-xs font-bold text-white shadow-2xs">
+              {pendingReservationsCount}
+            </span>
+          ) : (
+            <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+              {initialReservations.length}
+            </span>
+          )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("flats")}
+          className={`relative inline-flex items-center gap-2.5 border-b-2 px-6 py-3.5 text-sm font-semibold transition ${
+            activeTab === "flats"
+              ? "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400"
+              : "border-transparent text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
+          }`}
+        >
+          <ImageIcon className="size-4" />
+          <span>Flats & Fotos</span>
+          <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">
+            {flats.length}
+          </span>
+        </button>
+      </div>
+
+      {activeTab === "reservas" ? (
+        <AdminReservationsManager initialReservations={initialReservations} />
+      ) : (
+        <div className="flex flex-col gap-8">
+          {/* Cards de Métricas */}
+          <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <div className="rounded-2xl border border-stone-200 bg-white p-5 shadow-xs dark:border-stone-800 dark:bg-stone-900">
           <p className="text-xs font-medium uppercase tracking-wider text-stone-500">
             Total de Flats
@@ -211,6 +266,8 @@ export function AdminDashboard({ initialFlats }: AdminDashboardProps) {
             </div>
           )}
         </>
+      )}
+        </div>
       )}
     </div>
   );
