@@ -37,6 +37,8 @@ export default async function Home() {
     image: {
       src: settings.cover_image_url,
       alt: settings.cover_image_alt,
+      position: settings.cover_position,
+      fit: settings.cover_fit,
     },
     cta: {
       label: settings.cta_label,

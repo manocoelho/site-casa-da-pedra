@@ -10,7 +10,12 @@ export interface HeroContent {
   eyebrow: string;
   title: string;
   slogan: string;
-  image: { src: StaticImageData | string; alt: string };
+  image: {
+    src: StaticImageData | string;
+    alt: string;
+    position?: string;
+    fit?: "cover" | "contain";
+  };
   cta: { label: string; href: string };
   highlights: string[];
 }

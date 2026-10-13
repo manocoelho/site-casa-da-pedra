@@ -4,6 +4,8 @@ export interface SiteSettingsData {
   slogan: string;
   cover_image_url: string;
   cover_image_alt: string;
+  cover_position?: string;
+  cover_fit?: "cover" | "contain";
   cta_label: string;
   cta_href: string;
   highlights: string[];

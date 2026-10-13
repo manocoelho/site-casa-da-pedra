@@ -14,6 +14,8 @@ export const defaultSiteSettings: SiteSettingsData = {
       ? siteConfig.hero.image.src
       : "/images/hero-casa-da-pedra.jpg",
   cover_image_alt: siteConfig.hero.image.alt,
+  cover_position: "center 25%",
+  cover_fit: "cover",
   cta_label: siteConfig.hero.cta.label,
   cta_href: siteConfig.hero.cta.href,
   highlights: siteConfig.hero.highlights,
@@ -60,6 +62,8 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           slogan: row.slogan || defaultSiteSettings.slogan,
           cover_image_url: row.cover_image_url || defaultSiteSettings.cover_image_url,
           cover_image_alt: row.cover_image_alt || defaultSiteSettings.cover_image_alt,
+          cover_position: row.cover_position || defaultSiteSettings.cover_position,
+          cover_fit: row.cover_fit || defaultSiteSettings.cover_fit,
           cta_label: row.cta_label || defaultSiteSettings.cta_label,
           cta_href: row.cta_href || defaultSiteSettings.cta_href,
           highlights:

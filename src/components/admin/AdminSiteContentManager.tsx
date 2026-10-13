@@ -173,7 +173,9 @@ export function AdminSiteContentManager({
                   src={settings.cover_image_url}
                   alt="Capa da Home"
                   fill
+                  unoptimized
                   className="object-cover"
+                  style={{ objectPosition: settings.cover_position || "center 25%" }}
                 />
               </div>
 
@@ -210,6 +212,70 @@ export function AdminSiteContentManager({
                     <span className="text-[10px] text-stone-500">{uploadProgress}%</span>
                   </div>
                 )}
+              </div>
+            </div>
+
+            {/* Ajuste de Enquadramento e Foco */}
+            <div className="mt-5 border-t border-stone-100 pt-4 dark:border-stone-800">
+              <label className="text-xs font-semibold text-stone-900 uppercase tracking-wider dark:text-stone-100">
+                Foco do Enquadramento
+              </label>
+              <p className="mt-0.5 text-xs text-stone-500">
+                Evita cortes indesejados da casa e da pedra em telas maiores de computador e celular.
+              </p>
+
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {[
+                  { id: "center 20%", label: "Topo (Casa & Pedra)" },
+                  { id: "center 35%", label: "Meio" },
+                  { id: "center 70%", label: "Base (Portão)" },
+                  { id: "center center", label: "Centralizado" },
+                ].map((pos) => {
+                  const isSelected = (settings.cover_position || "center 25%") === pos.id;
+                  return (
+                    <button
+                      key={pos.id}
+                      type="button"
+                      onClick={() => setSettings((s) => ({ ...s, cover_position: pos.id }))}
+                      className={`rounded-xl border p-2 text-center text-xs font-medium transition ${
+                        isSelected
+                          ? "border-amber-500 bg-amber-50 text-amber-950 font-bold dark:bg-amber-950/40 dark:text-amber-200"
+                          : "border-stone-200 bg-white text-stone-700 hover:bg-stone-50 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-300"
+                      }`}
+                    >
+                      {pos.label}
+                    </button>
+                  );
+                })}
+              </div>
+
+              {/* Modo de exibição: preencher vs foto completa */}
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                <span className="text-xs font-medium text-stone-600 dark:text-stone-400">
+                  Estilo:
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSettings((s) => ({ ...s, cover_fit: "cover" }))}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    (settings.cover_fit || "cover") === "cover"
+                      ? "bg-stone-900 text-white dark:bg-amber-500 dark:text-stone-950"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300"
+                  }`}
+                >
+                  Preencher tela (Imersivo)
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSettings((s) => ({ ...s, cover_fit: "contain" }))}
+                  className={`rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                    settings.cover_fit === "contain"
+                      ? "bg-stone-900 text-white dark:bg-amber-500 dark:text-stone-950"
+                      : "bg-stone-100 text-stone-600 hover:bg-stone-200 dark:bg-stone-800 dark:text-stone-300"
+                  }`}
+                >
+                  Foto inteira (Sem cortes)
+                </button>
               </div>
             </div>
           </div>
@@ -383,49 +449,75 @@ export function AdminSiteContentManager({
             </div>
 
             {/* Mockup da Hero Section */}
-            <div className="relative mt-4 h-[440px] w-full overflow-hidden rounded-2xl bg-stone-950 flex flex-col justify-end p-6 text-white shadow-inner">
+            <div className="relative isolate mt-4 h-[460px] w-full overflow-hidden rounded-2xl bg-stone-950 flex flex-col justify-end p-6 text-white shadow-inner">
               {/* Imagem de Capa com overlays */}
-              <Image
-                src={settings.cover_image_url}
-                alt="Prévia da Capa"
-                fill
-                className="object-cover -z-20"
-              />
-              <div className="absolute inset-0 -z-10 bg-gradient-to-t from-stone-950/95 via-stone-950/50 to-stone-950/20" />
+              {settings.cover_fit === "contain" ? (
+                <>
+                  <Image
+                    src={settings.cover_image_url}
+                    alt=""
+                    fill
+                    unoptimized
+                    className="object-cover blur-lg opacity-40"
+                  />
+                  <Image
+                    src={settings.cover_image_url}
+                    alt="Prévia da Capa"
+                    fill
+                    unoptimized
+                    className="object-contain object-center"
+                  />
+                </>
+              ) : (
+                <Image
+                  src={settings.cover_image_url}
+                  alt="Prévia da Capa"
+                  fill
+                  unoptimized
+                  className="object-cover transition-all duration-300"
+                  style={{ objectPosition: settings.cover_position || "center 25%" }}
+                />
+              )}
 
-              {/* Eyebrow */}
-              <div>
-                <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-200 backdrop-blur">
-                  <MapPinIcon className="size-3" />
-                  {settings.eyebrow || "Localização"}
-                </span>
-              </div>
+              {/* Overlays direcionados para leitura sem ofuscar a foto */}
+              <div className="absolute inset-0 bg-gradient-to-t from-stone-950/95 via-stone-950/25 to-transparent pointer-events-none" />
+              <div className="absolute inset-y-0 left-0 w-4/5 bg-gradient-to-r from-stone-950/80 via-stone-950/20 to-transparent pointer-events-none" />
 
-              {/* Título */}
-              <h4 className="mt-3 text-3xl font-bold tracking-tight text-white leading-tight">
-                {settings.title || "Título da Casa"}
-              </h4>
-
-              {/* Slogan */}
-              <p className="mt-2 text-xs text-stone-200 line-clamp-3 leading-relaxed">
-                {settings.slogan || "Slogan e subtítulo da Casa da Pedra..."}
-              </p>
-
-              {/* Botão */}
-              <div className="mt-4 flex flex-col gap-3">
-                <div className="inline-flex h-10 w-fit items-center justify-center rounded-full bg-amber-500 px-5 text-xs font-bold text-stone-950 shadow-md">
-                  {settings.cta_label || "Ver Disponibilidade"}
+              <div className="relative z-10 flex flex-col">
+                {/* Eyebrow */}
+                <div>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-200 backdrop-blur">
+                    <MapPinIcon className="size-3" />
+                    {settings.eyebrow || "Localização"}
+                  </span>
                 </div>
 
-                {/* Highlights */}
-                <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-stone-300">
-                  {settings.highlights.slice(0, 3).map((h) => (
-                    <li key={h} className="flex items-center gap-1">
-                      <span className="size-1 rounded-full bg-amber-400" />
-                      {h}
-                    </li>
-                  ))}
-                </ul>
+                {/* Título */}
+                <h4 className="mt-3 text-2xl font-bold tracking-tight text-white leading-tight">
+                  {settings.title || "Título da Casa"}
+                </h4>
+
+                {/* Slogan */}
+                <p className="mt-2 text-xs text-stone-200 line-clamp-3 leading-relaxed">
+                  {settings.slogan || "Slogan e subtítulo da Casa da Pedra..."}
+                </p>
+
+                {/* Botão */}
+                <div className="mt-4 flex flex-col gap-3">
+                  <div className="inline-flex h-9 w-fit items-center justify-center rounded-full bg-amber-500 px-4 text-xs font-bold text-stone-950 shadow-md">
+                    {settings.cta_label || "Ver Disponibilidade"}
+                  </div>
+
+                  {/* Highlights */}
+                  <ul className="flex flex-wrap gap-x-3 gap-y-1 text-[10px] text-stone-300">
+                    {settings.highlights.slice(0, 3).map((h) => (
+                      <li key={h} className="flex items-center gap-1">
+                        <span className="size-1 rounded-full bg-amber-400" />
+                        {h}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
               </div>
             </div>
 
