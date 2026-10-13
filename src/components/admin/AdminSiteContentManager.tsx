@@ -26,6 +26,7 @@ export function AdminSiteContentManager({
   const [uploadProgress, setUploadProgress] = useState(0);
   const [isSaving, setIsSaving] = useState(false);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [warningMessage, setWarningMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
   // Manipulação de imagem de capa
@@ -107,6 +108,7 @@ export function AdminSiteContentManager({
     setIsSaving(true);
     setErrorMessage(null);
     setSuccessMessage(null);
+    setWarningMessage(null);
 
     try {
       const service = getBrowserSiteSettingsService();
@@ -117,7 +119,11 @@ export function AdminSiteContentManager({
       }
 
       await revalidateSiteContent();
-      setSuccessMessage("Configurações e textos da página inicial atualizados com sucesso!");
+      if (res.warning) {
+        setWarningMessage(res.warning);
+      } else {
+        setSuccessMessage("Configurações e textos da página inicial atualizados com sucesso!");
+      }
     } catch (err) {
       setErrorMessage(err instanceof Error ? err.message : "Erro ao salvar alterações.");
     } finally {
@@ -138,15 +144,34 @@ export function AdminSiteContentManager({
       </div>
 
       {successMessage && <Alert variant="success">{successMessage}</Alert>}
+      {warningMessage && (
+        <div className="flex flex-col gap-2">
+          <Alert variant="warning">{warningMessage}</Alert>
+          <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+            <p className="font-bold">Comando para habilitar o salvamento das opções de enquadramento:</p>
+            <p className="mt-1 text-stone-600 dark:text-stone-300">
+              Copie o comando SQL abaixo e execute no <strong>SQL Editor</strong> do painel do seu Supabase:
+            </p>
+            <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-900 p-3 font-mono text-[11px] text-amber-300 select-all">
+              {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover';`}
+            </pre>
+          </div>
+        </div>
+      )}
       {errorMessage && (
         <div className="flex flex-col gap-2">
           <Alert variant="error">{errorMessage}</Alert>
-          {errorMessage.includes("site_settings") && (
-            <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 text-xs text-amber-900 dark:border-amber-900/40 dark:bg-amber-950/30 dark:text-amber-200">
-              <p className="font-semibold">Instrução para criar a tabela no Supabase:</p>
-              <p className="mt-1">
-                Execute o script de migration <code>supabase/migrations/20261013000000_site_settings.sql</code> no <strong>SQL Editor</strong> do painel do seu Supabase.
+          {(errorMessage.includes("site_settings") ||
+            errorMessage.includes("cover_fit") ||
+            errorMessage.includes("cover_position")) && (
+            <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
+              <p className="font-bold">Comando SQL para atualizar a tabela no Supabase:</p>
+              <p className="mt-1 text-stone-600 dark:text-stone-300">
+                Execute o comando abaixo no <strong>SQL Editor</strong> do painel do seu Supabase:
               </p>
+              <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-900 p-3 font-mono text-[11px] text-amber-300 select-all">
+                {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover';`}
+              </pre>
             </div>
           )}
         </div>

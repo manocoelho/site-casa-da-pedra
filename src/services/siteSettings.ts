@@ -83,7 +83,9 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
     /**
      * Atualiza os textos e imagem de capa no banco de dados.
      */
-    async updateSettings(values: SiteSettingsUpdate): Promise<{ ok: boolean; error?: string }> {
+    async updateSettings(
+      values: SiteSettingsUpdate
+    ): Promise<{ ok: boolean; error?: string; warning?: string }> {
       try {
         const untypedClient = supabase as unknown as {
           from: (table: string) => {
@@ -93,7 +95,7 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           };
         };
 
-        const { error } = await untypedClient
+        let { error } = await untypedClient
           .from("site_settings")
           .upsert({
             id: "main",
@@ -102,6 +104,30 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           })
           .select();
 
+        let warning: string | undefined;
+
+        // Se o banco ainda não possuir as novas colunas de enquadramento (cover_fit ou cover_position)
+        if (
+          error &&
+          (error.message.includes("cover_fit") || error.message.includes("cover_position"))
+        ) {
+          const { cover_fit: _cf, cover_position: _cp, ...legacyValues } = values;
+          const retry = await untypedClient
+            .from("site_settings")
+            .upsert({
+              id: "main",
+              ...legacyValues,
+              updated_at: new Date().toISOString(),
+            })
+            .select();
+
+          if (!retry.error) {
+            error = null;
+            warning =
+              "Configurações principais salvas! Para salvar também a posição e estilo de enquadramento no banco, execute a migração SQL indicada abaixo no Supabase.";
+          }
+        }
+
         if (error) {
           return {
             ok: false,
@@ -109,7 +135,7 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           };
         }
 
-        return { ok: true };
+        return { ok: true, warning };
       } catch (err) {
         const message = err instanceof Error ? err.message : "Erro desconhecido ao salvar.";
         return { ok: false, error: message };
