@@ -12,6 +12,16 @@ const nextConfig: NextConfig = {
       },
     },
   },
+  images: {
+    // Permite next/image com arquivos públicos do Supabase Storage (fotos dos flats).
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "*.supabase.co",
+        pathname: "/storage/v1/object/public/**",
+      },
+    ],
+  },
 };
 
 export default nextConfig;
