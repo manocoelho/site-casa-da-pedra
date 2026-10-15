@@ -9,6 +9,9 @@ export interface SiteSettingsData {
   cta_label: string;
   cta_href: string;
   highlights: string[];
+  flats_section_tag?: string;
+  flats_section_title?: string;
+  flats_section_subtitle?: string;
   whatsapp: string;
   instagram: string;
   email: string;

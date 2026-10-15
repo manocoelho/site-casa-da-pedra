@@ -15,6 +15,9 @@ create table if not exists public.site_settings (
   cta_label        text not null default 'Ver Disponibilidade',
   cta_href         text not null default '#flats',
   highlights       text[] not null default array['Clima de serra', 'Vista para as montanhas', 'Perto do centro histórico'],
+  flats_section_tag text not null default 'Hospedagem',
+  flats_section_title text not null default 'Escolha o seu flat',
+  flats_section_subtitle text not null default 'Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.',
   whatsapp         text not null default '5583999262031',
   instagram        text not null default 'flatcasadapedra',
   email            text not null default 'contato@casadapedra.com.br',
@@ -24,7 +27,10 @@ create table if not exists public.site_settings (
 -- Garante que colunas novas existam caso a tabela já tenha sido criada anteriormente
 alter table public.site_settings
   add column if not exists cover_position text not null default 'center 25%',
-  add column if not exists cover_fit text not null default 'cover';
+  add column if not exists cover_fit text not null default 'cover',
+  add column if not exists flats_section_tag text not null default 'Hospedagem',
+  add column if not exists flats_section_title text not null default 'Escolha o seu flat',
+  add column if not exists flats_section_subtitle text not null default 'Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.';
 
 -- RLS
 alter table public.site_settings enable row level security;

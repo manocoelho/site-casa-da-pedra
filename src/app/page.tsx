@@ -57,7 +57,13 @@ export default async function Home() {
     <>
       <main className="flex flex-1 flex-col">
         <HeroSection {...heroData} />
-        <FlatList flats={flats} whatsapp={contactData.whatsapp} />
+        <FlatList
+          flats={flats}
+          whatsapp={contactData.whatsapp}
+          sectionTag={settings.flats_section_tag}
+          sectionTitle={settings.flats_section_title}
+          sectionSubtitle={settings.flats_section_subtitle}
+        />
       </main>
       <Footer
         name={settings.title}

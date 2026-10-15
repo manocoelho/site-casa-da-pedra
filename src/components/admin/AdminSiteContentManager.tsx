@@ -148,12 +148,12 @@ export function AdminSiteContentManager({
         <div className="flex flex-col gap-2">
           <Alert variant="warning">{warningMessage}</Alert>
           <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
-            <p className="font-bold">Comando para habilitar o salvamento das opções de enquadramento:</p>
+            <p className="font-bold">Comando para habilitar o salvamento de todas as opções no banco:</p>
             <p className="mt-1 text-stone-600 dark:text-stone-300">
               Copie o comando SQL abaixo e execute no <strong>SQL Editor</strong> do painel do seu Supabase:
             </p>
             <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-900 p-3 font-mono text-[11px] text-amber-300 select-all">
-              {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover';`}
+              {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover',\n  ADD COLUMN IF NOT EXISTS flats_section_tag text NOT NULL DEFAULT 'Hospedagem',\n  ADD COLUMN IF NOT EXISTS flats_section_title text NOT NULL DEFAULT 'Escolha o seu flat',\n  ADD COLUMN IF NOT EXISTS flats_section_subtitle text NOT NULL DEFAULT 'Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.';`}
             </pre>
           </div>
         </div>
@@ -163,14 +163,15 @@ export function AdminSiteContentManager({
           <Alert variant="error">{errorMessage}</Alert>
           {(errorMessage.includes("site_settings") ||
             errorMessage.includes("cover_fit") ||
-            errorMessage.includes("cover_position")) && (
+            errorMessage.includes("cover_position") ||
+            errorMessage.includes("flats_section")) && (
             <div className="rounded-2xl border border-amber-300 bg-amber-50 p-4 text-xs text-amber-950 dark:border-amber-900/60 dark:bg-amber-950/40 dark:text-amber-200">
               <p className="font-bold">Comando SQL para atualizar a tabela no Supabase:</p>
               <p className="mt-1 text-stone-600 dark:text-stone-300">
                 Execute o comando abaixo no <strong>SQL Editor</strong> do painel do seu Supabase:
               </p>
               <pre className="mt-2 overflow-x-auto rounded-lg bg-stone-900 p-3 font-mono text-[11px] text-amber-300 select-all">
-                {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover';`}
+                {`ALTER TABLE public.site_settings\n  ADD COLUMN IF NOT EXISTS cover_position text NOT NULL DEFAULT 'center 25%',\n  ADD COLUMN IF NOT EXISTS cover_fit text NOT NULL DEFAULT 'cover',\n  ADD COLUMN IF NOT EXISTS flats_section_tag text NOT NULL DEFAULT 'Hospedagem',\n  ADD COLUMN IF NOT EXISTS flats_section_title text NOT NULL DEFAULT 'Escolha o seu flat',\n  ADD COLUMN IF NOT EXISTS flats_section_subtitle text NOT NULL DEFAULT 'Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.';`}
               </pre>
             </div>
           )}
@@ -408,7 +409,73 @@ export function AdminSiteContentManager({
             </div>
           </div>
 
-          {/* Seção 3: Informações de Contato e Redes */}
+          {/* Seção 3: Textos da Seção de Flats (Hospedagem) */}
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
+              Textos da Seção dos Flats
+            </h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Personalize o título, subtítulo e etiqueta exibidos logo acima da listagem de flats.
+            </p>
+
+            <div className="mt-5 flex flex-col gap-4">
+              <TextField
+                label="Etiqueta Superior (Categoria)"
+                name="flats_section_tag"
+                value={settings.flats_section_tag || ""}
+                onChange={(e) => setSettings((s) => ({ ...s, flats_section_tag: e.target.value }))}
+                placeholder="Ex.: Hospedagem"
+              />
+
+              <TextField
+                label="Título da Seção de Flats"
+                name="flats_section_title"
+                value={settings.flats_section_title || ""}
+                onChange={(e) =>
+                  setSettings((s) => ({ ...s, flats_section_title: e.target.value }))
+                }
+                placeholder="Ex.: Escolha o seu flat"
+              />
+
+              <div className="flex flex-col gap-1.5">
+                <label
+                  htmlFor="flats-subtitle"
+                  className="text-sm font-medium text-stone-700 dark:text-stone-300"
+                >
+                  Descrição / Subtítulo da Seção
+                </label>
+                <textarea
+                  id="flats-subtitle"
+                  rows={3}
+                  value={settings.flats_section_subtitle || ""}
+                  onChange={(e) =>
+                    setSettings((s) => ({ ...s, flats_section_subtitle: e.target.value }))
+                  }
+                  className="rounded-lg border border-stone-300 bg-white p-3 text-sm text-stone-900 placeholder:text-stone-400 focus:border-stone-500 focus:outline-hidden focus:ring-2 focus:ring-stone-200 dark:border-stone-700 dark:bg-stone-900 dark:text-stone-100"
+                  placeholder="Ex.: Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira."
+                />
+              </div>
+
+              {/* Prévia da Seção de Flats */}
+              <div className="mt-1 rounded-2xl border border-stone-100 bg-stone-50 p-4 dark:border-stone-800 dark:bg-stone-950">
+                <span className="text-[10px] font-bold uppercase tracking-wider text-stone-400 dark:text-stone-500">
+                  Prévia desta seção
+                </span>
+                <p className="mt-2 text-xs font-semibold uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400">
+                  {settings.flats_section_tag || "Hospedagem"}
+                </p>
+                <h4 className="mt-1 text-lg font-bold tracking-tight text-stone-900 dark:text-stone-50">
+                  {settings.flats_section_title || "Escolha o seu flat"}
+                </h4>
+                <p className="mt-1 text-xs text-stone-600 dark:text-stone-400 leading-relaxed">
+                  {settings.flats_section_subtitle ||
+                    "Espaços completos e aconchegantes para viver Bananeiras no seu ritmo..."}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Seção 4: Informações de Contato e Redes */}
           <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
             <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
               Contatos e Redes Sociais

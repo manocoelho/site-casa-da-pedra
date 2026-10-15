@@ -19,6 +19,10 @@ export const defaultSiteSettings: SiteSettingsData = {
   cta_label: siteConfig.hero.cta.label,
   cta_href: siteConfig.hero.cta.href,
   highlights: siteConfig.hero.highlights,
+  flats_section_tag: "Hospedagem",
+  flats_section_title: "Escolha o seu flat",
+  flats_section_subtitle:
+    "Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.",
   whatsapp: siteConfig.contact.whatsapp,
   instagram: siteConfig.contact.instagram,
   email: siteConfig.contact.email,
@@ -70,6 +74,10 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
             Array.isArray(row.highlights) && row.highlights.length > 0
               ? row.highlights
               : defaultSiteSettings.highlights,
+          flats_section_tag: row.flats_section_tag || defaultSiteSettings.flats_section_tag,
+          flats_section_title: row.flats_section_title || defaultSiteSettings.flats_section_title,
+          flats_section_subtitle:
+            row.flats_section_subtitle || defaultSiteSettings.flats_section_subtitle,
           whatsapp: row.whatsapp || defaultSiteSettings.whatsapp,
           instagram: row.instagram || defaultSiteSettings.instagram,
           email: row.email || defaultSiteSettings.email,
@@ -106,12 +114,21 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
 
         let warning: string | undefined;
 
-        // Se o banco ainda não possuir as novas colunas de enquadramento (cover_fit ou cover_position)
+        // Se o banco ainda não possuir as novas colunas de enquadramento ou seção de flats
         if (
           error &&
-          (error.message.includes("cover_fit") || error.message.includes("cover_position"))
+          (error.message.includes("cover_fit") ||
+            error.message.includes("cover_position") ||
+            error.message.includes("flats_section"))
         ) {
-          const { cover_fit: _cf, cover_position: _cp, ...legacyValues } = values;
+          const {
+            cover_fit: _cf,
+            cover_position: _cp,
+            flats_section_tag: _fst,
+            flats_section_title: _fsti,
+            flats_section_subtitle: _fss,
+            ...legacyValues
+          } = values;
           const retry = await untypedClient
             .from("site_settings")
             .upsert({
@@ -124,7 +141,7 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           if (!retry.error) {
             error = null;
             warning =
-              "Configurações principais salvas! Para salvar também a posição e estilo de enquadramento no banco, execute a migração SQL indicada abaixo no Supabase.";
+              "Configurações salvas! Para salvar também as opções de enquadramento e textos da seção de flats no banco, execute a migração SQL indicada abaixo no Supabase.";
           }
         }
 

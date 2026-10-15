@@ -6,22 +6,30 @@ interface FlatListProps {
   flats: FlatWithPhotos[];
   /** WhatsApp para consulta de disponibilidade (somente dígitos, com DDI). */
   whatsapp: string;
+  sectionTag?: string;
+  sectionTitle?: string;
+  sectionSubtitle?: string;
 }
 
-export function FlatList({ flats, whatsapp }: FlatListProps) {
+export function FlatList({
+  flats,
+  whatsapp,
+  sectionTag = "Hospedagem",
+  sectionTitle = "Escolha o seu flat",
+  sectionSubtitle = "Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com vista para a serra às noites frias ao pé da fogueira.",
+}: FlatListProps) {
   return (
     <section id="flats" className="scroll-mt-8 bg-stone-50 py-20 sm:py-28 dark:bg-stone-950">
       <div className="mx-auto max-w-6xl px-4 sm:px-6">
         <header className="max-w-2xl">
           <p className="text-sm font-medium uppercase tracking-[0.2em] text-amber-700 dark:text-amber-400">
-            Hospedagem
+            {sectionTag}
           </p>
           <h2 className="mt-3 text-3xl font-semibold tracking-tight text-stone-900 sm:text-5xl dark:text-stone-50">
-            Escolha o seu flat
+            {sectionTitle}
           </h2>
           <p className="mt-4 text-lg text-stone-600 dark:text-stone-400">
-            Espaços completos e aconchegantes para viver Bananeiras no seu ritmo — do café com
-            vista para a serra às noites frias ao pé da fogueira.
+            {sectionSubtitle}
           </p>
         </header>
 
