@@ -10,7 +10,6 @@ import {
 } from "@/components/ui/icons";
 import { AdminReservationsTable } from "@/components/admin/AdminReservationsTable";
 import {
-  useAdminReservations,
   type AdminReservationFilter,
   type AdminReservationsHookReturn,
 } from "@/hooks/useAdminReservations";
@@ -18,19 +17,14 @@ import { formatCurrency } from "@/lib/format";
 import type { AdminReservation } from "@/types/reservations";
 
 interface AdminReservationsManagerProps {
-  initialReservations?: AdminReservation[];
-  reservationsHook?: AdminReservationsHookReturn;
+  reservationsHook: AdminReservationsHookReturn;
   className?: string;
 }
 
 export function AdminReservationsManager({
-  initialReservations = [],
   reservationsHook,
   className = "",
 }: AdminReservationsManagerProps) {
-  const internalHook = useAdminReservations({ initialReservations });
-  const activeHook = reservationsHook || internalHook;
-
   const {
     reservations,
     allReservations,
@@ -48,7 +42,7 @@ export function AdminReservationsManager({
     toggleSound,
     testSound,
     updateStatus,
-  } = activeHook;
+  } = reservationsHook;
 
   const filterTabs: Array<{ id: AdminReservationFilter; label: string; count: number }> = [
     { id: "todas", label: "Todas", count: allReservations.length },

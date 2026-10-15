@@ -229,10 +229,7 @@ export function AdminDashboard({
       )}
 
       {activeTab === "reservas" ? (
-        <AdminReservationsManager
-          initialReservations={initialReservations}
-          reservationsHook={reservationsHook}
-        />
+        <AdminReservationsManager reservationsHook={reservationsHook} />
       ) : activeTab === "conteudo" ? (
         <AdminSiteContentManager initialSettings={initialSiteSettings} />
       ) : (

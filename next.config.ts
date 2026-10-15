@@ -13,6 +13,7 @@ const nextConfig: NextConfig = {
     },
   },
   images: {
+    qualities: [75, 95],
     // Permite next/image com arquivos públicos do Supabase Storage (fotos dos flats).
     remotePatterns: [
       {

@@ -29,12 +29,15 @@ function getAudioContext(): AudioContext | null {
   }
 }
 
+let isAudioUnlockInitialized = false;
+
 /**
  * Desbloqueia o AudioContext na primeira interação do usuário (clique, toque ou tecla),
  * garantindo que eventos assíncronos (como Realtime WebSocket) consigam reproduzir sons.
  */
 export function initAudioUnlock() {
-  if (typeof window === "undefined") return;
+  if (typeof window === "undefined" || isAudioUnlockInitialized) return;
+  isAudioUnlockInitialized = true;
 
   const unlock = () => {
     const ctx = getAudioContext();
