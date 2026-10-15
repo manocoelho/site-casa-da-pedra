@@ -1,6 +1,9 @@
 import Image from "next/image";
 import type { HeroContent } from "@/config/site";
-import { ArrowDownIcon, MapPinIcon } from "@/components/ui/icons";
+import { ArrowDownIcon, ExternalLinkIcon, MapPinIcon } from "@/components/ui/icons";
+
+const GOOGLE_MAPS_URL =
+  "https://www.google.com/maps/search/?api=1&query=R.+Antonio+Maia%2C+140+-+Bananeiras+PB%2C+58220-000";
 
 export function HeroSection({ eyebrow, title, slogan, image, cta, highlights }: HeroContent) {
   const isContain = image.fit === "contain";
@@ -50,10 +53,30 @@ export function HeroSection({ eyebrow, title, slogan, image, cta, highlights }: 
       <div className="absolute inset-y-0 left-0 w-full sm:w-3/5 -z-10 bg-gradient-to-r from-stone-950/75 via-stone-950/20 to-transparent" />
 
       <div className="mx-auto w-full max-w-6xl px-4 pb-16 pt-32 sm:px-6 sm:pb-24">
-        <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-200 backdrop-blur">
-          <MapPinIcon className="size-3.5" />
-          {eyebrow}
-        </p>
+        {/* Localização e Pino Interativo */}
+        <div className="flex flex-col items-start gap-2.5">
+          <p className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium uppercase tracking-[0.18em] text-amber-200 backdrop-blur">
+            <MapPinIcon className="size-3.5" />
+            {eyebrow}
+          </p>
+
+          <a
+            href={GOOGLE_MAPS_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            title="Abrir no Google Maps: R. Antonio Maia, 140 - Bananeiras PB, 58220-000"
+            className="group inline-flex max-w-full items-center gap-2 rounded-full border border-amber-400/35 bg-stone-950/80 px-3 py-1.5 text-xs font-medium text-stone-200 shadow-sm backdrop-blur-md transition hover:border-amber-400 hover:bg-stone-900 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-400"
+          >
+            <span className="flex size-5 items-center justify-center rounded-full bg-amber-500/20 text-amber-300 transition-colors group-hover:bg-amber-500 group-hover:text-stone-950">
+              <MapPinIcon className="size-3" />
+            </span>
+            <span className="truncate underline-offset-2 group-hover:underline">
+              R. Antonio Maia, 140 · Bananeiras - PB
+            </span>
+            <span className="hidden sm:inline text-stone-400 font-normal">, 58220-000</span>
+            <ExternalLinkIcon className="size-3 text-stone-400 transition-transform group-hover:translate-x-0.5 group-hover:text-amber-300" />
+          </a>
+        </div>
 
         <h1 className="mt-6 text-5xl font-semibold tracking-tight text-white sm:text-7xl">
           {title}

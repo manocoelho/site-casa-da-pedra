@@ -509,11 +509,15 @@ export function AdminSiteContentManager({
               <div className="absolute inset-y-0 left-0 w-4/5 bg-gradient-to-r from-stone-950/80 via-stone-950/20 to-transparent pointer-events-none" />
 
               <div className="relative z-10 flex flex-col">
-                {/* Eyebrow */}
-                <div>
+                {/* Eyebrow e Pino de Localização */}
+                <div className="flex flex-col items-start gap-1.5">
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-white/20 bg-white/10 px-2.5 py-0.5 text-[10px] font-medium uppercase tracking-wider text-amber-200 backdrop-blur">
                     <MapPinIcon className="size-3" />
                     {settings.eyebrow || "Localização"}
+                  </span>
+                  <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-stone-950/80 px-2.5 py-0.5 text-[10px] text-stone-200">
+                    <MapPinIcon className="size-2.5 text-amber-400" />
+                    R. Antonio Maia, 140 · Bananeiras - PB
                   </span>
                 </div>
 
