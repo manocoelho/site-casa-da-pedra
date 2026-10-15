@@ -31,6 +31,7 @@ export function ChatWindow({
   const { messages, isLoading, isSending, error, sendMessage } = useChat(
     userId,
     receiverId,
+    interlocutorRole,
   );
 
   useEffect(() => {
@@ -77,7 +78,7 @@ export function ChatWindow({
               {interlocutorRole === "admin" && (
                 <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
                   <ShieldIcon className="size-2.5" />
-                  Dono
+                  Administração
                 </span>
               )}
             </div>

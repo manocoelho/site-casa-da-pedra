@@ -13,6 +13,7 @@ import {
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { initAudioUnlock, playNotificationSound } from "@/lib/sound";
+import { getBrowserMessagesService } from "@/services/messages";
 import {
   ChatNotificationToast,
   type ChatToastData,
@@ -42,7 +43,7 @@ function getReadTimestampKey(userId: string, senderId: string): string {
 }
 
 export function ChatNotificationProvider({ children }: { children: ReactNode }) {
-  const { user } = useAuthUser();
+  const { user, isAdmin } = useAuthUser();
   const [unreadBySender, setUnreadBySender] = useState<Record<string, number>>({});
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [toast, setToast] = useState<ChatToastData | null>(null);
@@ -93,18 +94,41 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
       return;
     }
     const supabase = createSupabaseBrowserClient();
+    const messagesService = getBrowserMessagesService();
 
     async function loadUnreadMessages() {
       if (!user) return;
       try {
-        const { data, error } = await supabase
-          .from("messages")
-          .select("id, sender_id, timestamp")
-          .eq("receiver_id", user.id)
-          .order("timestamp", { ascending: false })
-          .limit(150);
+        let data: { id: string; sender_id: string; timestamp: string }[] | null = null;
 
-        if (error || !data || !isMounted) return;
+        if (isAdmin) {
+          // Para administradores: busca mensagens enviadas por hóspedes (sender_id não é admin)
+          const adminIds = await messagesService.getAdminIds();
+          let query = supabase
+            .from("messages")
+            .select("id, sender_id, timestamp")
+            .order("timestamp", { ascending: false })
+            .limit(200);
+
+          if (adminIds.length > 0) {
+            query = query.not("sender_id", "in", `(${adminIds.join(",")})`);
+          }
+
+          const res = await query;
+          data = res.data;
+        } else {
+          // Para clientes/hóspedes: busca mensagens recebidas pelo próprio usuário
+          const res = await supabase
+            .from("messages")
+            .select("id, sender_id, timestamp")
+            .eq("receiver_id", user.id)
+            .order("timestamp", { ascending: false })
+            .limit(100);
+
+          data = res.data;
+        }
+
+        if (!data || !isMounted) return;
 
         const counts: Record<string, number> = {};
         for (const msg of data) {
@@ -131,14 +155,22 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
     return () => {
       isMounted = false;
     };
-  }, [user]);
+  }, [user, isAdmin]);
 
-  // 2. Inscrição Realtime no canal do usuário para novos alertas
+  // 2. Inscrição Realtime no canal para novos alertas (todos os admins recebem alertas de clientes)
   useEffect(() => {
     if (!user) return;
 
     const supabase = createSupabaseBrowserClient();
-    const channelName = `notifications:user:${user.id}`;
+    const messagesService = getBrowserMessagesService();
+    const channelName = `notifications:user:${user.id}:${isAdmin ? "admin" : "client"}`;
+
+    let adminIdSet = new Set<string>();
+    if (isAdmin) {
+      messagesService.getAdminIds().then((ids) => {
+        adminIdSet = new Set(ids);
+      });
+    }
 
     const channel = supabase
       .channel(channelName)
@@ -148,11 +180,24 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
           event: "INSERT",
           schema: "public",
           table: "messages",
-          filter: `receiver_id=eq.${user.id}`,
+          ...(isAdmin ? {} : { filter: `receiver_id=eq.${user.id}` }),
         },
         async (payload) => {
           const newMsg = payload.new as ChatMessage;
           const senderId = newMsg.sender_id;
+
+          // Se a mensagem foi enviada pelo próprio usuário logado, ignora
+          if (senderId === user.id) return;
+
+          // Se o usuário atual for admin e a mensagem foi enviada por outro admin, ignora
+          if (isAdmin) {
+            if (adminIdSet.has(senderId)) return;
+            if (adminIdSet.size === 0) {
+              const ids = await messagesService.getAdminIds();
+              adminIdSet = new Set(ids);
+              if (adminIdSet.has(senderId)) return;
+            }
+          }
 
           // Se o usuário está com o chat aberto exatamente nessa conversa, marca como lida imediatamente
           if (activeConversationRef.current === senderId) {
@@ -170,7 +215,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
           playNotificationSound();
 
           // Busca nome do remetente para exibir no toast
-          let senderName = "Novo contato";
+          let senderName = isAdmin ? "Novo Hóspede" : "Casa da Pedra";
           try {
             const { data } = await supabase
               .from("users")
@@ -204,7 +249,7 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
       if (toastTimeoutRef.current) clearTimeout(toastTimeoutRef.current);
       supabase.removeChannel(channel);
     };
-  }, [user, markConversationAsRead]);
+  }, [user, isAdmin, markConversationAsRead]);
 
   // Contagem total
   const unreadCount = useMemo(() => {

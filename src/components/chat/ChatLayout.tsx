@@ -95,9 +95,8 @@ export function ChatLayout({
     activeConversation?.interlocutorNome ||
     (activeInterlocutorId === adminContact?.id ? adminContact?.nome || "Anfitrião Casa da Pedra" : "Contato");
 
-  const interlocutorRole =
-    activeConversation?.interlocutorRole ||
-    (activeInterlocutorId === adminContact?.id ? "admin" : "client");
+  const interlocutorRole: "admin" | "client" =
+    activeConversation?.interlocutorRole || (isAdmin ? "client" : "admin");
 
   return (
     <div className="flex h-[calc(100vh-8rem)] w-full overflow-hidden rounded-3xl border border-stone-200 bg-white shadow-xl dark:border-stone-800 dark:bg-stone-900">
