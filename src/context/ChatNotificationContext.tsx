@@ -12,7 +12,7 @@ import {
 } from "react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { useAuthUser } from "@/hooks/useAuthUser";
-import { playNotificationSound } from "@/lib/sound";
+import { initAudioUnlock, playNotificationSound } from "@/lib/sound";
 import {
   ChatNotificationToast,
   type ChatToastData,
@@ -48,6 +48,10 @@ export function ChatNotificationProvider({ children }: { children: ReactNode }) 
   const [toast, setToast] = useState<ChatToastData | null>(null);
   const toastTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const activeConversationRef = useRef<string | null>(null);
+
+  useEffect(() => {
+    initAudioUnlock();
+  }, []);
 
   // Mantém a ref sincronizada para leitura síncrona dentro do listener do WebSocket
   useEffect(() => {

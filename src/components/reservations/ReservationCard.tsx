@@ -5,22 +5,34 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
-import { CalendarIcon, CheckIcon, ClockIcon } from "@/components/ui/icons";
+import {
+  CalendarIcon,
+  CheckIcon,
+  ClockIcon,
+  InstagramIcon,
+  WhatsAppIcon,
+} from "@/components/ui/icons";
 import { ReservationCalendar } from "@/components/reservations/ReservationCalendar";
 import { useReservation } from "@/hooks/useReservation";
 import { formatCurrency } from "@/lib/format";
+import { buildInstagramUrl, buildWhatsAppUrl } from "@/lib/contact";
+import { siteConfig } from "@/config/site";
 import { ROUTES } from "@/lib/routes";
 import type { FlatWithPhotos } from "@/types/entities";
 
 interface ReservationCardProps {
   flat: FlatWithPhotos;
   isAuthenticated: boolean;
+  whatsapp?: string;
+  instagram?: string;
   className?: string;
 }
 
 export function ReservationCard({
   flat,
   isAuthenticated,
+  whatsapp,
+  instagram,
   className = "",
 }: ReservationCardProps) {
   const {
@@ -63,35 +75,89 @@ export function ReservationCard({
       {/* Confirmação de Sucesso */}
       {confirmedReservation ? (
         <div className="flex flex-col gap-4 rounded-2xl bg-emerald-50 p-5 text-emerald-900 dark:bg-emerald-950/40 dark:text-emerald-200">
-          <div className="flex items-center gap-2 font-semibold">
-            <div className="flex size-6 items-center justify-center rounded-full bg-emerald-600 text-white">
-              <CheckIcon className="size-4" />
+          <div className="flex items-center gap-2.5 font-semibold text-emerald-950 dark:text-emerald-100">
+            <div className="flex size-7 shrink-0 items-center justify-center rounded-full bg-emerald-600 text-white shadow-xs">
+              <CheckIcon className="size-4 stroke-[2.5]" />
             </div>
-            Reserva Solicitada com Sucesso!
+            <span className="text-sm sm:text-base">Reserva Solicitada com Sucesso!</span>
           </div>
 
           <p className="text-xs leading-relaxed text-emerald-800 dark:text-emerald-300">
             Sua solicitação de reserva para o <strong>{flat.titulo}</strong> foi registrada com status{" "}
-            <span className="font-semibold uppercase tracking-wider">pendente</span>. O administrador entrará em contato para confirmação.
+            <span className="inline-block rounded-md bg-amber-100 px-1.5 py-0.5 text-[11px] font-bold tracking-wide text-amber-900 dark:bg-amber-950/80 dark:text-amber-300">
+              PENDENTE
+            </span>
+            . O anfitrião entrará em contato para confirmação.
           </p>
 
-          <div className="rounded-xl bg-white/80 p-3 text-xs text-stone-700 shadow-2xs dark:bg-stone-900/80 dark:text-stone-300">
+          <div className="rounded-xl border border-emerald-200/60 bg-white/90 p-3.5 text-xs text-stone-700 shadow-2xs dark:border-emerald-800/40 dark:bg-stone-900/90 dark:text-stone-300">
             <p>
-              <strong>Check-in:</strong>{" "}
+              <strong className="text-stone-900 dark:text-stone-100">Check-in:</strong>{" "}
               {dateRange?.from
                 ? format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
                 : confirmedReservation.data_inicio}
             </p>
             <p className="mt-1">
-              <strong>Check-out:</strong>{" "}
+              <strong className="text-stone-900 dark:text-stone-100">Check-out:</strong>{" "}
               {dateRange?.to
                 ? format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })
                 : confirmedReservation.data_fim}
             </p>
-            <p className="mt-1 font-semibold text-stone-900 dark:text-stone-100">
+            <p className="mt-2 border-t border-stone-100 pt-2 font-bold text-stone-900 dark:border-stone-800 dark:text-stone-100">
               Total ({nights} {nights === 1 ? "noite" : "noites"}): {formatCurrency(totalPrice)}
             </p>
           </div>
+
+          {/* Formas de Contato Rápido (WhatsApp & Instagram) */}
+          {(() => {
+            const activeWhatsApp = whatsapp || siteConfig.contact.whatsapp;
+            const activeInstagram = instagram || siteConfig.contact.instagram;
+            const cleanInstagram = activeInstagram.replace(/^@/, "");
+
+            const checkInDateStr = dateRange?.from
+              ? format(dateRange.from, "dd/MM/yyyy", { locale: ptBR })
+              : confirmedReservation.data_inicio;
+            const checkOutDateStr = dateRange?.to
+              ? format(dateRange.to, "dd/MM/yyyy", { locale: ptBR })
+              : confirmedReservation.data_fim;
+
+            const whatsAppMessage = `Olá! Acabei de enviar uma proposta de reserva no site da Casa da Pedra para o flat "${flat.titulo}" (Check-in: ${checkInDateStr}, Check-out: ${checkOutDateStr}). Gostaria de agilizar a confirmação!`;
+            const whatsAppUrl = buildWhatsAppUrl(activeWhatsApp, whatsAppMessage);
+            const instagramUrl = buildInstagramUrl(activeInstagram);
+
+            return (
+              <div className="flex flex-col gap-2 rounded-xl border border-emerald-200/80 bg-white/80 p-3.5 shadow-2xs dark:border-emerald-800/60 dark:bg-stone-900/80">
+                <p className="text-xs font-semibold text-stone-900 dark:text-stone-100">
+                  Deseja uma resposta mais rápida ou tem dúvidas?
+                </p>
+                <p className="text-[11px] leading-relaxed text-stone-600 dark:text-stone-400">
+                  Fale diretamente conosco pelos canais oficiais:
+                </p>
+
+                <div className="mt-1 flex flex-col gap-2">
+                  <a
+                    href={whatsAppUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-xs font-semibold text-white shadow-xs transition hover:bg-emerald-700 active:scale-[0.99]"
+                  >
+                    <WhatsAppIcon className="size-4" />
+                    <span>Conversar no WhatsApp</span>
+                  </a>
+
+                  <a
+                    href={instagramUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-stone-200 bg-white px-4 py-2 text-xs font-semibold text-stone-800 shadow-2xs transition hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700 active:scale-[0.99]"
+                  >
+                    <InstagramIcon className="size-4 text-pink-600" />
+                    <span>Instagram @{cleanInstagram}</span>
+                  </a>
+                </div>
+              </div>
+            );
+          })()}
 
           <Button variant="outline" onClick={resetSelection} className="w-full text-xs">
             Fazer outra reserva

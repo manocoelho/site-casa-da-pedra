@@ -8,6 +8,7 @@ import { FlatCreateModal } from "@/components/admin/FlatCreateModal";
 import { AdminReservationsManager } from "@/components/admin/AdminReservationsManager";
 import { AdminSiteContentManager } from "@/components/admin/AdminSiteContentManager";
 import {
+  BellIcon,
   CalendarIcon,
   ImageIcon,
   PencilIcon,
@@ -19,6 +20,7 @@ import { formatCurrency, formatGuests } from "@/lib/format";
 import { getBrowserFlatsService } from "@/services/flats";
 import { revalidateFlatsCache } from "@/app/admin/actions";
 import { defaultSiteSettings } from "@/services/siteSettings";
+import { useAdminReservations } from "@/hooks/useAdminReservations";
 import type { Flat, FlatPhoto, FlatWithPhotos } from "@/types/entities";
 import type { AdminReservation } from "@/types/reservations";
 import type { SiteSettingsData } from "@/types/siteSettings";
@@ -59,9 +61,8 @@ export function AdminDashboard({
     return { totalFlats, totalPhotos, avgPrice, totalCapacity };
   }, [flats]);
 
-  const pendingReservationsCount = useMemo(() => {
-    return initialReservations.filter((r) => r.status === "pendente").length;
-  }, [initialReservations]);
+  const reservationsHook = useAdminReservations({ initialReservations });
+  const pendingReservationsCount = reservationsHook.stats.pendingCount;
 
   function handlePhotoAdded(photo: FlatPhoto) {
     if (!activeFlat) return;
@@ -156,7 +157,7 @@ export function AdminDashboard({
             </span>
           ) : (
             <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">
-              {initialReservations.length}
+              {reservationsHook.allReservations.length}
             </span>
           )}
         </button>
@@ -191,8 +192,47 @@ export function AdminDashboard({
         </button>
       </div>
 
+      {/* Notificação Flutuante quando nova proposta chega em outra aba */}
+      {activeTab !== "reservas" && reservationsHook.newAlert && (
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-300 bg-amber-50 p-4 shadow-sm dark:border-amber-800 dark:bg-amber-950/40 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-stone-950 shadow-xs">
+              <BellIcon className="size-4 animate-bounce" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-amber-950 dark:text-amber-100">
+                🔔 Nova Proposta de Reserva Recebida!
+              </p>
+              <p className="text-xs text-amber-900/80 dark:text-amber-300">
+                Hóspede <strong>{reservationsHook.newAlert.guestName}</strong> solicitou reserva para o{" "}
+                <strong>{reservationsHook.newAlert.flatTitle}</strong> ({reservationsHook.newAlert.checkIn} a {reservationsHook.newAlert.checkOut}).
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              onClick={() => setActiveTab("reservas")}
+              className="h-8 px-3 text-xs font-semibold"
+            >
+              Ver Reserva
+            </Button>
+            <button
+              type="button"
+              onClick={reservationsHook.dismissAlert}
+              className="rounded-lg p-1.5 text-stone-500 hover:bg-stone-200 dark:text-stone-400 dark:hover:bg-stone-800"
+              title="Dispensar aviso"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {activeTab === "reservas" ? (
-        <AdminReservationsManager initialReservations={initialReservations} />
+        <AdminReservationsManager
+          initialReservations={initialReservations}
+          reservationsHook={reservationsHook}
+        />
       ) : activeTab === "conteudo" ? (
         <AdminSiteContentManager initialSettings={initialSiteSettings} />
       ) : (

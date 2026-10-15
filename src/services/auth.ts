@@ -68,7 +68,6 @@ export function createAuthService(supabase: TypedSupabaseClient) {
         provider,
         options: {
           redirectTo: options.redirectTo,
-          scopes: provider === "facebook" ? "email public_profile" : undefined,
           queryParams: provider === "google" ? { prompt: "select_account" } : undefined,
         },
       });
@@ -145,7 +144,24 @@ const AUTH_ERROR_MESSAGES: Record<string, string> = {
 const DEFAULT_ERROR_MESSAGE = "Não foi possível concluir a operação. Tente novamente.";
 
 function failure(error: AuthError): { ok: false; error: string } {
-  const message = (error.code && AUTH_ERROR_MESSAGES[error.code]) || DEFAULT_ERROR_MESSAGE;
+  const msgLower = (error.message || "").toLowerCase();
+  if (
+    msgLower.includes("provider is not enabled") ||
+    msgLower.includes("unsupported provider") ||
+    error.code === "provider_disabled"
+  ) {
+    return {
+      ok: false,
+      error:
+        "Este provedor de login precisa ser ativado no painel do Supabase (Authentication > Providers).",
+    };
+  }
+
+  const message =
+    (error.code && AUTH_ERROR_MESSAGES[error.code]) ||
+    error.message ||
+    DEFAULT_ERROR_MESSAGE;
+
   if (process.env.NODE_ENV !== "production") {
     console.error("[auth]", error.code ?? error.name, error.message);
   }

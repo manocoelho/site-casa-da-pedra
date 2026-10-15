@@ -10,6 +10,7 @@ import {
 } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { getBrowserReservationsService } from "@/services/reservations";
+import { playSuccessChime } from "@/lib/sound";
 import type { Reservation } from "@/types/entities";
 import type { OccupiedDateRange } from "@/types/reservations";
 
@@ -153,6 +154,7 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
       }
 
       setConfirmedReservation(result.data);
+      playSuccessChime();
       onSuccess?.(result.data);
       // Recarrega disponibilidade após nova reserva
       await loadAvailability();

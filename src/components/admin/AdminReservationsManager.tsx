@@ -2,21 +2,35 @@
 
 import { Alert } from "@/components/ui/Alert";
 import { Spinner } from "@/components/ui/Spinner";
-import { SearchIcon } from "@/components/ui/icons";
+import {
+  BellIcon,
+  SearchIcon,
+  Volume2Icon,
+  VolumeXIcon,
+} from "@/components/ui/icons";
 import { AdminReservationsTable } from "@/components/admin/AdminReservationsTable";
-import { useAdminReservations, type AdminReservationFilter } from "@/hooks/useAdminReservations";
+import {
+  useAdminReservations,
+  type AdminReservationFilter,
+  type AdminReservationsHookReturn,
+} from "@/hooks/useAdminReservations";
 import { formatCurrency } from "@/lib/format";
 import type { AdminReservation } from "@/types/reservations";
 
 interface AdminReservationsManagerProps {
   initialReservations?: AdminReservation[];
+  reservationsHook?: AdminReservationsHookReturn;
   className?: string;
 }
 
 export function AdminReservationsManager({
   initialReservations = [],
+  reservationsHook,
   className = "",
 }: AdminReservationsManagerProps) {
+  const internalHook = useAdminReservations({ initialReservations });
+  const activeHook = reservationsHook || internalHook;
+
   const {
     reservations,
     allReservations,
@@ -28,8 +42,13 @@ export function AdminReservationsManager({
     setFilterStatus,
     searchQuery,
     setSearchQuery,
+    newAlert,
+    dismissAlert,
+    isSoundEnabled,
+    toggleSound,
+    testSound,
     updateStatus,
-  } = useAdminReservations({ initialReservations });
+  } = activeHook;
 
   const filterTabs: Array<{ id: AdminReservationFilter; label: string; count: number }> = [
     { id: "todas", label: "Todas", count: allReservations.length },
@@ -41,15 +60,95 @@ export function AdminReservationsManager({
 
   return (
     <div className={`flex flex-col gap-6 ${className}`}>
-      {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl dark:text-stone-50">
-          Reservas dos Hóspedes
-        </h2>
-        <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
-          Aprove solicitações pendentes, acompanhe o faturamento previsto e entre em contato direto com os hóspedes.
-        </p>
+      {/* Header com controles de áudio e status realtime */}
+      <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <div className="flex items-center gap-2.5">
+            <h2 className="text-2xl font-bold tracking-tight text-stone-900 sm:text-3xl dark:text-stone-50">
+              Reservas dos Hóspedes
+            </h2>
+            <span
+              className="inline-flex items-center gap-1.5 rounded-full bg-emerald-50 px-2.5 py-0.5 text-[11px] font-medium text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300"
+              title="Monitoramento automático em tempo real ativado"
+            >
+              <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+              Tempo Real
+            </span>
+          </div>
+          <p className="mt-1 text-sm text-stone-600 dark:text-stone-400">
+            Aprove solicitações pendentes, acompanhe o faturamento previsto e receba alertas sonoros a cada nova reserva.
+          </p>
+        </div>
+
+        {/* Controles de Som */}
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={toggleSound}
+            className={`inline-flex items-center gap-1.5 rounded-xl border px-3 py-1.5 text-xs font-medium transition ${
+              isSoundEnabled
+                ? "border-emerald-200 bg-emerald-50 text-emerald-900 hover:bg-emerald-100 dark:border-emerald-800 dark:bg-emerald-950/40 dark:text-emerald-200"
+                : "border-stone-200 bg-stone-100 text-stone-500 hover:bg-stone-200 dark:border-stone-800 dark:bg-stone-900 dark:text-stone-400"
+            }`}
+            title={isSoundEnabled ? "Clique para silenciar o aviso sonoro" : "Clique para ativar o aviso sonoro"}
+          >
+            {isSoundEnabled ? (
+              <>
+                <Volume2Icon className="size-3.5 text-emerald-600 dark:text-emerald-400" />
+                <span>Alerta Sonoro Ativado</span>
+              </>
+            ) : (
+              <>
+                <VolumeXIcon className="size-3.5 text-stone-400" />
+                <span>Alerta Silenciado</span>
+              </>
+            )}
+          </button>
+
+          <button
+            type="button"
+            onClick={testSound}
+            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-1.5 text-xs font-medium text-stone-700 shadow-2xs transition hover:bg-stone-50 dark:border-stone-700 dark:bg-stone-800 dark:text-stone-200 dark:hover:bg-stone-700 active:scale-95"
+            title="Ouvir o toque de recepção para testar seu alto-falante"
+          >
+            <BellIcon className="size-3.5 text-amber-600 dark:text-amber-400" />
+            <span>Testar Som</span>
+          </button>
+        </div>
       </div>
+
+      {/* Banner de Nova Proposta de Reserva Recebida */}
+      {newAlert && (
+        <div className="flex items-center justify-between gap-4 rounded-2xl border border-amber-300 bg-gradient-to-r from-amber-50 to-amber-100/60 p-4 shadow-sm dark:border-amber-800 dark:from-amber-950/40 dark:to-amber-900/20">
+          <div className="flex items-center gap-3.5">
+            <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-amber-500 text-stone-950 shadow-xs">
+              <BellIcon className="size-5 animate-bounce" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold uppercase tracking-wider text-amber-900 dark:text-amber-300">
+                  🔔 Nova Proposta de Reserva Recebida!
+                </span>
+                <span className="rounded-full bg-amber-200/80 px-2 py-0.2 text-[10px] font-bold text-amber-950 dark:bg-amber-900/80 dark:text-amber-200">
+                  Pendente
+                </span>
+              </div>
+              <p className="mt-0.5 text-sm text-amber-950 dark:text-amber-100">
+                O hóspede <strong>{newAlert.guestName}</strong> solicitou reserva para o{" "}
+                <strong>{newAlert.flatTitle}</strong> ({newAlert.checkIn} a {newAlert.checkOut}).
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={dismissAlert}
+            className="rounded-xl p-2 text-stone-500 hover:bg-amber-200/50 hover:text-stone-800 dark:text-stone-400 dark:hover:bg-amber-900/50 dark:hover:text-stone-200"
+            title="Dispensar aviso"
+          >
+            ✕
+          </button>
+        </div>
+      )}
 
       {error && <Alert variant="error">{error}</Alert>}
 

@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { createFlatsService } from "@/services/flats";
 import { createFeedbacksService } from "@/services/feedbacks";
+import { createSiteSettingsService } from "@/services/siteSettings";
 import { ImageCarousel, type CarouselImage } from "@/components/ui/ImageCarousel";
 import { ReservationCard } from "@/components/reservations/ReservationCard";
 import { FeedbackSection } from "@/components/feedbacks/FeedbackSection";
@@ -38,18 +39,21 @@ export default async function FlatDetailsPage({ params }: FlatPageProps) {
   const { id } = await params;
   const supabase = await createSupabaseServerClient();
 
-  const [flatsService, feedbacksService, { data: userData }] = [
-    createFlatsService(supabase),
-    createFeedbacksService(supabase),
-    await supabase.auth.getUser(),
-  ];
+  const flatsService = createFlatsService(supabase);
+  const feedbacksService = createFeedbacksService(supabase);
+  const siteSettingsService = createSiteSettingsService(supabase);
 
-  const flat = await flatsService.getById(id);
+  const [flat, initialFeedbacks, { data: userData }, siteSettings] = await Promise.all([
+    flatsService.getById(id),
+    feedbacksService.listByFlat(id),
+    supabase.auth.getUser(),
+    siteSettingsService.getSettings(),
+  ]);
+
   if (!flat) {
     notFound();
   }
 
-  const initialFeedbacks = await feedbacksService.listByFlat(id);
   const isAuthenticated = Boolean(userData?.user);
 
   const images: CarouselImage[] = flat.flat_photos.map((photo, index) => ({
@@ -150,7 +154,12 @@ export default async function FlatDetailsPage({ params }: FlatPageProps) {
 
         {/* Coluna Direita (1 col): Card de Reserva Fixo */}
         <div className="sticky top-20 lg:col-span-1">
-          <ReservationCard flat={flat} isAuthenticated={isAuthenticated} />
+          <ReservationCard
+            flat={flat}
+            isAuthenticated={isAuthenticated}
+            whatsapp={siteSettings.whatsapp}
+            instagram={siteSettings.instagram}
+          />
         </div>
       </div>
     </div>
