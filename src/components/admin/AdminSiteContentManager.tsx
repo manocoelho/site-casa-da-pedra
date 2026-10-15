@@ -584,7 +584,7 @@ export function AdminSiteContentManager({
                   </span>
                   <span className="inline-flex items-center gap-1.5 rounded-full border border-amber-400/30 bg-stone-950/80 px-2.5 py-0.5 text-[10px] text-stone-200">
                     <MapPinIcon className="size-2.5 text-amber-400" />
-                    R. Antonio Maia, 140 · Bananeiras - PB
+                    R. Antonio Maia, 54 · Bananeiras, PB
                   </span>
                 </div>
 
