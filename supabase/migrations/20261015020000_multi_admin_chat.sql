@@ -126,7 +126,7 @@ returns table (
   sender_id   uuid,
   receiver_id uuid,
   conteudo    text,
-  timestamp   timestamptz
+  "timestamp" timestamptz
 )
 language plpgsql
 security definer
@@ -149,19 +149,19 @@ begin
     -- Admin consultando mensagens de um cliente:
     -- Retorna todas as mensagens trocadas entre esse cliente e qualquer admin.
     return query
-    select m.id, m.sender_id, m.receiver_id, m.conteudo, m.timestamp
+    select m.id, m.sender_id, m.receiver_id, m.conteudo, m."timestamp"
     from public.messages m
     where (
       (m.sender_id = p_interlocutor_id and m.receiver_id in (select u.id from public.users u where u.role = 'admin'))
       or
       (m.receiver_id = p_interlocutor_id and m.sender_id in (select u.id from public.users u where u.role = 'admin'))
     )
-    order by m.timestamp asc;
+    order by m."timestamp" asc;
   else
     -- Cliente consultando mensagens com a administração:
     -- Retorna todas as mensagens enviadas por ele ou enviadas por qualquer admin para ele.
     return query
-    select m.id, m.sender_id, m.receiver_id, m.conteudo, m.timestamp
+    select m.id, m.sender_id, m.receiver_id, m.conteudo, m."timestamp"
     from public.messages m
     where (
       (m.sender_id = v_uid and m.receiver_id in (select u.id from public.users u where u.role = 'admin'))
@@ -172,7 +172,7 @@ begin
       or
       (m.receiver_id = v_uid and m.sender_id = p_interlocutor_id)
     )
-    order by m.timestamp asc;
+    order by m."timestamp" asc;
   end if;
 end;
 $$;
