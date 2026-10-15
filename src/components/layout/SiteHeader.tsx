@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/Button";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useChatNotifications } from "@/context/ChatNotificationContext";
@@ -14,8 +15,27 @@ export function SiteHeader() {
   return (
     <header className="border-b border-stone-200 bg-white/80 backdrop-blur dark:border-stone-800 dark:bg-stone-950/80">
       <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href={ROUTES.home} className="text-lg font-semibold tracking-tight text-stone-900 dark:text-stone-50">
-          Casa da Pedra
+        <Link
+          href={ROUTES.home}
+          className="flex items-center gap-2 transition hover:opacity-90"
+          aria-label="Casa da Pedra - Início"
+        >
+          <Image
+            src="/images/logo-casa-da-pedra-light.png"
+            alt="Casa da Pedra - Flats em Bananeiras"
+            width={184}
+            height={44}
+            className="h-10 w-auto object-contain dark:hidden"
+            priority
+          />
+          <Image
+            src="/images/logo-casa-da-pedra.png"
+            alt="Casa da Pedra - Flats em Bananeiras"
+            width={184}
+            height={44}
+            className="hidden h-10 w-auto object-contain dark:block"
+            priority
+          />
         </Link>
 
         <nav className="flex items-center gap-2" aria-label="Conta">

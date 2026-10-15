@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { ChatIcon, ExternalLinkIcon, ShieldIcon } from "@/components/ui/icons";
 import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { ROUTES } from "@/lib/routes";
@@ -20,9 +21,25 @@ export function AdminHeader({ userEmail, userName }: AdminHeaderProps) {
         <div className="flex items-center gap-3">
           <Link
             href={ROUTES.home}
-            className="text-base font-semibold tracking-tight text-stone-900 hover:text-amber-600 dark:text-stone-100 dark:hover:text-amber-400"
+            className="flex items-center gap-2 transition hover:opacity-90"
+            aria-label="Casa da Pedra - Início"
           >
-            Casa da Pedra
+            <Image
+              src="/images/logo-casa-da-pedra-light.png"
+              alt="Casa da Pedra"
+              width={140}
+              height={34}
+              className="h-8 w-auto object-contain dark:hidden"
+              priority
+            />
+            <Image
+              src="/images/logo-casa-da-pedra.png"
+              alt="Casa da Pedra"
+              width={140}
+              height={34}
+              className="hidden h-8 w-auto object-contain dark:block"
+              priority
+            />
           </Link>
           <span className="text-stone-300 dark:text-stone-700">/</span>
           <span className="flex items-center gap-1.5 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-semibold text-amber-900 dark:bg-amber-900/40 dark:text-amber-200">
