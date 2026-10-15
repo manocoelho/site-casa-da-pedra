@@ -41,6 +41,8 @@ export function Footer({ name, location, description, contact }: FooterProps) {
             <li><a href="#flats" className="hover:text-white">Nossos flats</a></li>
             <li><Link href={ROUTES.login} className="hover:text-white">Entrar</Link></li>
             <li><Link href={ROUTES.cadastro} className="hover:text-white">Criar conta</Link></li>
+            <li><Link href={ROUTES.privacidade} className="hover:text-white">Privacidade & LGPD</Link></li>
+            <li><Link href={ROUTES.termos} className="hover:text-white">Termos de Uso</Link></li>
           </ul>
         </nav>
 
@@ -64,9 +66,20 @@ export function Footer({ name, location, description, contact }: FooterProps) {
       </div>
 
       <div className="border-t border-stone-800">
-        <p className="mx-auto max-w-6xl px-4 py-6 text-xs text-stone-500 sm:px-6">
-          © {name} · {location}. Todos os direitos reservados.
-        </p>
+        <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-4 py-6 text-xs text-stone-500 sm:flex-row sm:px-6">
+          <p>
+            © {name} · {location}. Todos os direitos reservados.
+          </p>
+          <div className="flex flex-wrap items-center gap-4">
+            <Link href={ROUTES.privacidade} className="transition hover:text-stone-300">
+              Privacidade (LGPD)
+            </Link>
+            <span aria-hidden="true">•</span>
+            <Link href={ROUTES.termos} className="transition hover:text-stone-300">
+              Termos de Uso
+            </Link>
+          </div>
+        </div>
       </div>
     </footer>
   );

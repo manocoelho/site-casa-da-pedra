@@ -210,6 +210,13 @@ export function ReservationCard({
       <div className="flex flex-col gap-1.5 border-t border-stone-100 pt-4 text-xs text-stone-500 dark:border-stone-800 dark:text-stone-400">
         <p>• Cancelamento gratuito em até 48h após a reserva.</p>
         <p>• Horário padrão de check-in às 14h e check-out às 12h.</p>
+        <p>
+          • Seus dados são protegidos conforme a{" "}
+          <Link href={ROUTES.privacidade} className="underline hover:text-amber-600 dark:hover:text-amber-400">
+            LGPD
+          </Link>{" "}
+          e utilizados exclusivamente para a gestão da sua estadia.
+        </p>
       </div>
     </aside>
   );

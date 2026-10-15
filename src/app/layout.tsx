@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { SiteHeader } from "@/components/layout/SiteHeader";
 import { ChatFloatingWidget } from "@/components/chat/ChatFloatingWidget";
+import { CookieConsentBanner } from "@/components/layout/CookieConsentBanner";
 import { ChatNotificationProvider } from "@/context/ChatNotificationContext";
 import "./globals.css";
 
@@ -37,6 +38,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
           {/* Cada página/layout define seu próprio <main> (e rodapé, quando houver). */}
           <div className="flex flex-1 flex-col">{children}</div>
           <ChatFloatingWidget />
+          <CookieConsentBanner />
         </ChatNotificationProvider>
       </body>
     </html>

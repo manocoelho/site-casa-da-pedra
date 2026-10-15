@@ -9,6 +9,8 @@ export const ROUTES = {
   minhaConta: "/minha-conta",
   admin: "/admin",
   chat: "/chat",
+  privacidade: "/privacidade",
+  termos: "/termos",
   flatDetails: (id: string) => `/flats/${id}`,
 } as const;
 

@@ -1,10 +1,12 @@
 "use client";
 
+import Link from "next/link";
 import { Alert } from "@/components/ui/Alert";
 import { Button } from "@/components/ui/Button";
 import { TextField } from "@/components/ui/TextField";
 import { useSignUpForm } from "@/hooks/useSignUpForm";
 import { MIN_PASSWORD_LENGTH } from "@/lib/validators/auth";
+import { ROUTES } from "@/lib/routes";
 
 export function SignUpForm({ redirectTo }: { redirectTo: string }) {
   const {
@@ -77,7 +79,27 @@ export function SignUpForm({ redirectTo }: { redirectTo: string }) {
         error={errors.confirmarSenha}
       />
 
-      <Button type="submit" fullWidth isLoading={isSubmitting} className="mt-2">
+      <div className="mt-1 text-center text-xs leading-relaxed text-stone-500 dark:text-stone-400">
+        Ao criar sua conta, você concorda com nossos{" "}
+        <Link
+          href={ROUTES.termos}
+          target="_blank"
+          className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-500 dark:text-amber-400"
+        >
+          Termos de Uso
+        </Link>{" "}
+        e declara estar ciente de nossa{" "}
+        <Link
+          href={ROUTES.privacidade}
+          target="_blank"
+          className="font-medium text-amber-600 underline underline-offset-2 hover:text-amber-500 dark:text-amber-400"
+        >
+          Política de Privacidade (LGPD)
+        </Link>
+        .
+      </div>
+
+      <Button type="submit" fullWidth isLoading={isSubmitting} className="mt-1">
         Criar conta
       </Button>
     </form>
