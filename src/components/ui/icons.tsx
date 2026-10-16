@@ -202,5 +202,25 @@ export const VolumeXIcon = (p: IconProps) => (
   </BaseIcon>
 );
 
+export const RefreshIcon = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+    <path d="M3 3v5h5" />
+    <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
+    <path d="M16 16h5v5" />
+  </BaseIcon>
+);
 
+export const CopyIcon = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <rect width="14" height="14" x="8" y="8" rx="2" ry="2" />
+    <path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2" />
+  </BaseIcon>
+);
 
+export const LinkIcon = (p: IconProps) => (
+  <BaseIcon {...p}>
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" />
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" />
+  </BaseIcon>
+);

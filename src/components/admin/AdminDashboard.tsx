@@ -7,12 +7,14 @@ import { FlatEditModal } from "@/components/admin/FlatEditModal";
 import { FlatCreateModal } from "@/components/admin/FlatCreateModal";
 import { AdminReservationsManager } from "@/components/admin/AdminReservationsManager";
 import { AdminSiteContentManager } from "@/components/admin/AdminSiteContentManager";
+import { AdminIcalManager } from "@/components/admin/AdminIcalManager";
 import {
   BellIcon,
   CalendarIcon,
   ImageIcon,
   PencilIcon,
   PlusIcon,
+  RefreshIcon,
   TrashIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -36,7 +38,7 @@ export function AdminDashboard({
   initialReservations = [],
   initialSiteSettings = defaultSiteSettings,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"reservas" | "flats" | "conteudo">("reservas");
+  const [activeTab, setActiveTab] = useState<"reservas" | "flats" | "ical" | "conteudo">("reservas");
   const [flats, setFlats] = useState<FlatWithPhotos[]>(initialFlats);
   const [selectedFlatId, setSelectedFlatId] = useState<string>(
     initialFlats[0]?.id || "",
@@ -139,7 +141,7 @@ export function AdminDashboard({
       </div>
 
       {/* Navegação por Abas Principais */}
-      <div className="flex border-b border-stone-200 dark:border-stone-800">
+      <div className="flex flex-wrap border-b border-stone-200 dark:border-stone-800">
         <button
           type="button"
           onClick={() => setActiveTab("reservas")}
@@ -176,6 +178,19 @@ export function AdminDashboard({
           <span className="rounded-full bg-stone-100 px-2 py-0.5 text-xs text-stone-600 dark:bg-stone-800 dark:text-stone-400">
             {flats.length}
           </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("ical")}
+          className={`relative inline-flex items-center gap-2.5 border-b-2 px-6 py-3.5 text-sm font-semibold transition ${
+            activeTab === "ical"
+              ? "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400"
+              : "border-transparent text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
+          }`}
+        >
+          <RefreshIcon className="size-4" />
+          <span>Sincronização (Airbnb / Booking)</span>
         </button>
 
         <button
@@ -230,6 +245,8 @@ export function AdminDashboard({
 
       {activeTab === "reservas" ? (
         <AdminReservationsManager reservationsHook={reservationsHook} />
+      ) : activeTab === "ical" ? (
+        <AdminIcalManager flats={flats} />
       ) : activeTab === "conteudo" ? (
         <AdminSiteContentManager initialSettings={initialSiteSettings} />
       ) : (

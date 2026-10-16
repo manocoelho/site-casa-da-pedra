@@ -46,7 +46,10 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
 
   useEffect(() => {
     let isMounted = true;
-    getBrowserReservationsService()
+    const reservationsService = getBrowserReservationsService();
+
+    // 1. Carrega disponibilidade imediata do banco
+    reservationsService
       .getOccupiedRanges(flatId)
       .then((ranges) => {
         if (isMounted) {
@@ -59,6 +62,20 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
         if (isMounted) {
           setIsLoadingAvailability(false);
         }
+      });
+
+    // 2. Sincroniza em segundo plano com Airbnb/Booking (respeitando cache de 5 min)
+    fetch(`/api/ical/sync?flatId=${encodeURIComponent(flatId)}`)
+      .then((res) => res.json())
+      .then((syncRes: { ok?: boolean; results?: unknown[] }) => {
+        if (isMounted && syncRes?.ok && Array.isArray(syncRes.results) && syncRes.results.length > 0) {
+          reservationsService.getOccupiedRanges(flatId).then((freshRanges) => {
+            if (isMounted) setOccupiedRanges(freshRanges);
+          });
+        }
+      })
+      .catch(() => {
+        // Ignora silenciosamente erros de sync em background
       });
 
     return () => {
@@ -139,6 +156,9 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
     try {
       const dataInicio = format(dateRange.from, "yyyy-MM-dd");
       const dataFim = format(dateRange.to, "yyyy-MM-dd");
+
+      // Atualiza os calendários externos antes de efetivar a reserva (evita overbooking)
+      await fetch(`/api/ical/sync?flatId=${encodeURIComponent(flatId)}`).catch(() => null);
 
       const reservationsService = getBrowserReservationsService();
       const result = await reservationsService.createReservation({

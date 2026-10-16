@@ -22,8 +22,41 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
      */
     async getOccupiedRanges(flatId: string): Promise<OccupiedDateRange[]> {
       const today = new Date().toISOString().split("T")[0];
+      const combined: OccupiedDateRange[] = [];
 
-      // 1. Tenta via RPC segura (SECURITY DEFINER)
+      // 1. Consulta bloqueios externos sincronizados (Airbnb / Booking.com)
+      try {
+        const untyped = supabase as unknown as {
+          from: (t: string) => {
+            select: (c: string) => {
+              eq: (col: string, val: string) => {
+                gte: (
+                  col2: string,
+                  val2: string,
+                ) => Promise<{ data: OccupiedDateRange[] | null; error: unknown }>;
+              };
+            };
+          };
+        };
+        const { data: extData, error: extErr } = await untyped
+          .from("external_calendar_blocks")
+          .select("data_inicio, data_fim")
+          .eq("flat_id", flatId)
+          .gte("data_fim", today);
+
+        if (!extErr && Array.isArray(extData)) {
+          for (const row of extData) {
+            combined.push({
+              data_inicio: String(row.data_inicio),
+              data_fim: String(row.data_fim),
+            });
+          }
+        }
+      } catch {
+        // Ignora caso a tabela ainda não exista
+      }
+
+      // 2. Tenta via RPC segura (SECURITY DEFINER)
       try {
         type RpcCaller = (
           fn: string,
@@ -37,16 +70,19 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         );
 
         if (!rpcError && Array.isArray(rpcData)) {
-          return rpcData.map((row) => ({
-            data_inicio: String(row.data_inicio),
-            data_fim: String(row.data_fim),
-          }));
+          for (const row of rpcData) {
+            combined.push({
+              data_inicio: String(row.data_inicio),
+              data_fim: String(row.data_fim),
+            });
+          }
+          return combined;
         }
       } catch (err) {
         console.warn("[reservations] RPC get_flat_occupied_ranges indisponível, usando fallback:", err);
       }
 
-      // 2. Fallback de consulta direta à tabela
+      // 3. Fallback de consulta direta à tabela reservations
       const { data, error } = await supabase
         .from("reservations")
         .select("data_inicio, data_fim")
@@ -56,13 +92,17 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
 
       if (error) {
         console.error("[reservations] Falha ao consultar disponibilidade:", error.message);
-        return [];
+        return combined;
       }
 
-      return (data || []).map((row) => ({
-        data_inicio: row.data_inicio,
-        data_fim: row.data_fim,
-      }));
+      for (const row of data || []) {
+        combined.push({
+          data_inicio: row.data_inicio,
+          data_fim: row.data_fim,
+        });
+      }
+
+      return combined;
     },
 
     /**
@@ -103,6 +143,23 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         };
       }
 
+      // Verifica se há conflito com bloqueios externos (Airbnb / Booking.com)
+      try {
+        const occupied = await this.getOccupiedRanges(input.flatId);
+        const hasOverlap = occupied.some(
+          (r) => input.dataInicio < r.data_fim && input.dataFim > r.data_inicio,
+        );
+        if (hasOverlap) {
+          return {
+            ok: false,
+            error:
+              "O período selecionado já está reservado ou indisponível (sincronizado com Airbnb/Booking). Escolha outras datas.",
+          };
+        }
+      } catch {
+        // Continua para validação no banco
+      }
+
       const { data, error } = await supabase
         .from("reservations")
         .insert({
@@ -124,7 +181,8 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         ) {
           return {
             ok: false,
-            error: "O período selecionado já está reservado por outro hóspede. Escolha outras datas.",
+            error:
+              "O período selecionado já está reservado por outro hóspede ou sincronizado via Airbnb/Booking. Escolha outras datas.",
           };
         }
 
