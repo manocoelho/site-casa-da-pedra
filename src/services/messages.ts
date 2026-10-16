@@ -65,16 +65,16 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
     ): Promise<ChatMessage[]> {
       // 1. Tenta a função RPC unificada get_conversation_messages
       try {
-        type RpcCaller = (
-          fn: string,
-          args: { p_interlocutor_id: string },
-        ) => Promise<{ data: ChatMessage[] | null; error: unknown }>;
+        type RpcClient = {
+          rpc: (
+            fn: string,
+            args: { p_interlocutor_id: string },
+          ) => Promise<{ data: ChatMessage[] | null; error: unknown }>;
+        };
 
-        const rpcCaller = supabase.rpc as unknown as RpcCaller;
-        const { data: rpcData, error: rpcError } = await rpcCaller(
-          "get_conversation_messages",
-          { p_interlocutor_id: receiverId },
-        );
+        const { data: rpcData, error: rpcError } = await (
+          supabase as unknown as RpcClient
+        ).rpc("get_conversation_messages", { p_interlocutor_id: receiverId });
 
         if (!rpcError && Array.isArray(rpcData)) {
           return rpcData;
@@ -192,12 +192,15 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
     async listConversations(userId: string): Promise<ChatConversation[]> {
       // 1. Tenta RPC get_user_conversations
       try {
-        type RpcCaller = (
-          fn: string,
-        ) => Promise<{ data: RpcConversationRow[] | null; error: unknown }>;
+        type RpcClient = {
+          rpc: (
+            fn: string,
+          ) => Promise<{ data: RpcConversationRow[] | null; error: unknown }>;
+        };
 
-        const rpcCaller = supabase.rpc as unknown as RpcCaller;
-        const { data: rpcData, error: rpcError } = await rpcCaller("get_user_conversations");
+        const { data: rpcData, error: rpcError } = await (
+          supabase as unknown as RpcClient
+        ).rpc("get_user_conversations");
 
         if (!rpcError && Array.isArray(rpcData)) {
           return rpcData.map((row) => ({

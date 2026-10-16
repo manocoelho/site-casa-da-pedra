@@ -68,16 +68,16 @@ export function createFeedbacksService(supabase: TypedSupabaseClient) {
     async listByFlat(flatId: string): Promise<FeedbackWithAuthor[]> {
       // 1. Tenta RPC segura
       try {
-        type RpcCaller = (
-          fn: string,
-          args: { p_flat_id: string },
-        ) => Promise<{ data: RpcFeedbackRow[] | null; error: unknown }>;
+        type RpcClient = {
+          rpc: (
+            fn: string,
+            args: { p_flat_id: string },
+          ) => Promise<{ data: RpcFeedbackRow[] | null; error: unknown }>;
+        };
 
-        const rpcCaller = supabase.rpc as unknown as RpcCaller;
-        const { data: rpcData, error: rpcError } = await rpcCaller(
-          "get_flat_feedbacks",
-          { p_flat_id: flatId },
-        );
+        const { data: rpcData, error: rpcError } = await (
+          supabase as unknown as RpcClient
+        ).rpc("get_flat_feedbacks", { p_flat_id: flatId });
 
         if (!rpcError && Array.isArray(rpcData)) {
           return rpcData.map((row) => ({

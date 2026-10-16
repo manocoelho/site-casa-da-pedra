@@ -49,29 +49,36 @@ export async function GET(
   }
 
   // 2. Busca as reservas nativas do site (sem re-exportar bloqueios vindos de fora)
-  type RpcCaller = (
-    fn: string,
-    args: { p_flat_id: string },
-  ) => Promise<{ data: NativeReservationRow[] | null; error: unknown }>;
+  type RpcClient = {
+    rpc: (
+      fn: string,
+      args: { p_flat_id: string },
+    ) => Promise<{ data: NativeReservationRow[] | null; error: unknown }>;
+  };
 
-  const rpcCaller = supabase.rpc as unknown as RpcCaller;
+  const rpcClient = supabase as unknown as RpcClient;
   let reservations: NativeReservationRow[] = [];
 
-  const { data: nativeData, error: nativeError } = await rpcCaller(
-    "get_flat_native_reservations_ical",
-    { p_flat_id: flatId },
-  );
+  try {
+    const { data: nativeData, error: nativeError } = await rpcClient.rpc(
+      "get_flat_native_reservations_ical",
+      { p_flat_id: flatId },
+    );
 
-  if (!nativeError && Array.isArray(nativeData)) {
-    reservations = nativeData;
-  } else {
-    // Fallback caso a RPC nova ainda não tenha sido criada no banco
-    const { data: fallbackData } = await rpcCaller("get_flat_occupied_ranges", {
-      p_flat_id: flatId,
-    });
-    if (Array.isArray(fallbackData)) {
-      reservations = fallbackData;
+    if (!nativeError && Array.isArray(nativeData)) {
+      reservations = nativeData;
+    } else {
+      // Fallback caso a RPC nova ainda não tenha sido criada no banco
+      const { data: fallbackData, error: fallbackError } = await rpcClient.rpc(
+        "get_flat_occupied_ranges",
+        { p_flat_id: flatId },
+      );
+      if (!fallbackError && Array.isArray(fallbackData)) {
+        reservations = fallbackData;
+      }
     }
+  } catch (err) {
+    console.warn("[api/ical] Aviso ao consultar reservas via RPC:", err);
   }
 
   const icsContent = generateIcalContent({

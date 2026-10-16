@@ -58,16 +58,16 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
 
       // 2. Tenta via RPC segura (SECURITY DEFINER)
       try {
-        type RpcCaller = (
-          fn: string,
-          args: { p_flat_id: string },
-        ) => Promise<{ data: OccupiedDateRange[] | null; error: unknown }>;
+        type RpcClient = {
+          rpc: (
+            fn: string,
+            args: { p_flat_id: string },
+          ) => Promise<{ data: OccupiedDateRange[] | null; error: unknown }>;
+        };
 
-        const rpcCaller = supabase.rpc as unknown as RpcCaller;
-        const { data: rpcData, error: rpcError } = await rpcCaller(
-          "get_flat_occupied_ranges",
-          { p_flat_id: flatId },
-        );
+        const { data: rpcData, error: rpcError } = await (
+          supabase as unknown as RpcClient
+        ).rpc("get_flat_occupied_ranges", { p_flat_id: flatId });
 
         if (!rpcError && Array.isArray(rpcData)) {
           for (const row of rpcData) {
