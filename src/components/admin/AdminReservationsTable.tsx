@@ -88,7 +88,10 @@ export function AdminReservationsTable({
             const flatTitle = r.flats?.titulo || "Flat";
             const pricePerNight = Number(r.flats?.preco_diaria) || 0;
             const { text: periodText, nights } = formatPeriod(r.data_inicio, r.data_fim);
-            const totalPrice = nights * pricePerNight;
+            const totalPrice =
+              typeof r.valor_total === "number" && r.valor_total > 0
+                ? Number(r.valor_total)
+                : nights * pricePerNight;
 
             return (
               <tr

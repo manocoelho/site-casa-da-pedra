@@ -287,12 +287,16 @@ export function useAdminReservations({
     for (const r of reservations) {
       if (r.status === "confirmada" || r.status === "concluida") {
         try {
-          const nights = Math.max(
-            1,
-            differenceInCalendarDays(parseISO(r.data_fim), parseISO(r.data_inicio)),
-          );
-          const price = Number(r.flats?.preco_diaria) || 0;
-          totalRevenue += nights * price;
+          if (typeof r.valor_total === "number" && r.valor_total > 0) {
+            totalRevenue += Number(r.valor_total);
+          } else {
+            const nights = Math.max(
+              1,
+              differenceInCalendarDays(parseISO(r.data_fim), parseISO(r.data_inicio)),
+            );
+            const price = Number(r.flats?.preco_diaria) || 0;
+            totalRevenue += nights * price;
+          }
         } catch {
           // ignore date parse error
         }

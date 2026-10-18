@@ -8,6 +8,7 @@ import { FlatCreateModal } from "@/components/admin/FlatCreateModal";
 import { AdminReservationsManager } from "@/components/admin/AdminReservationsManager";
 import { AdminSiteContentManager } from "@/components/admin/AdminSiteContentManager";
 import { AdminIcalManager } from "@/components/admin/AdminIcalManager";
+import { AdminPricingManager } from "@/components/admin/AdminPricingManager";
 import {
   BellIcon,
   CalendarIcon,
@@ -15,6 +16,7 @@ import {
   PencilIcon,
   PlusIcon,
   RefreshIcon,
+  SparklesIcon,
   TrashIcon,
   UsersIcon,
 } from "@/components/ui/icons";
@@ -38,7 +40,7 @@ export function AdminDashboard({
   initialReservations = [],
   initialSiteSettings = defaultSiteSettings,
 }: AdminDashboardProps) {
-  const [activeTab, setActiveTab] = useState<"reservas" | "flats" | "ical" | "conteudo">("reservas");
+  const [activeTab, setActiveTab] = useState<"reservas" | "precos" | "flats" | "ical" | "conteudo">("reservas");
   const [flats, setFlats] = useState<FlatWithPhotos[]>(initialFlats);
   const [selectedFlatId, setSelectedFlatId] = useState<string>(
     initialFlats[0]?.id || "",
@@ -136,7 +138,7 @@ export function AdminDashboard({
           Painel de Administração
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-stone-600 dark:text-stone-400">
-          Gerencie as reservas dos hóspedes, fotos e informações dos flats da Casa da Pedra.
+          Gerencie as reservas dos hóspedes, preços por data no calendário, fotos e informações dos flats da Casa da Pedra.
         </p>
       </div>
 
@@ -162,6 +164,19 @@ export function AdminDashboard({
               {reservationsHook.allReservations.length}
             </span>
           )}
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("precos")}
+          className={`relative inline-flex items-center gap-2.5 border-b-2 px-6 py-3.5 text-sm font-semibold transition ${
+            activeTab === "precos"
+              ? "border-amber-600 text-amber-600 dark:border-amber-400 dark:text-amber-400"
+              : "border-transparent text-stone-600 hover:text-stone-900 dark:text-stone-400 dark:hover:text-stone-200"
+          }`}
+        >
+          <SparklesIcon className="size-4" />
+          <span>Calendário de Preços</span>
         </button>
 
         <button
@@ -245,6 +260,8 @@ export function AdminDashboard({
 
       {activeTab === "reservas" ? (
         <AdminReservationsManager reservationsHook={reservationsHook} />
+      ) : activeTab === "precos" ? (
+        <AdminPricingManager flats={flats} />
       ) : activeTab === "ical" ? (
         <AdminIcalManager flats={flats} />
       ) : activeTab === "conteudo" ? (

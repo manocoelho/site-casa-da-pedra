@@ -6,3 +6,4 @@ export type * from "./reservations";
 export type * from "./chat";
 export type * from "./storage";
 export type * from "./ical";
+export type * from "./pricing";

@@ -39,6 +39,9 @@ export function ReservationCard({
     dateRange,
     setDateRange,
     occupiedIntervals,
+    datePricesMap,
+    nightlyBreakdown,
+    hasCustomPricesInSelection,
     isLoadingAvailability,
     nights,
     totalPrice,
@@ -64,7 +67,7 @@ export function ReservationCard({
           <span className="text-3xl font-bold tracking-tight text-stone-900 dark:text-stone-50">
             {formatCurrency(flat.preco_diaria)}
           </span>
-          <span className="ml-1.5 text-sm text-stone-500 dark:text-stone-400">/ noite</span>
+          <span className="ml-1.5 text-sm text-stone-500 dark:text-stone-400">/ noite (base)</span>
         </div>
         <span className="inline-flex items-center gap-1 rounded-full bg-amber-50 px-2.5 py-1 text-xs font-semibold text-amber-900 dark:bg-amber-950/60 dark:text-amber-300">
           <ClockIcon className="size-3.5" />
@@ -191,6 +194,8 @@ export function ReservationCard({
               selectedRange={dateRange}
               onSelectRange={setDateRange}
               occupiedIntervals={occupiedIntervals}
+              datePricesMap={datePricesMap}
+              basePrice={flat.preco_diaria}
               isLoading={isLoadingAvailability}
             />
           </div>
@@ -216,14 +221,47 @@ export function ReservationCard({
 
                   <div className="my-1 border-t border-stone-200 dark:border-stone-800" />
 
-                  <div className="flex justify-between text-stone-700 dark:text-stone-300">
-                    <span>
-                      {formatCurrency(flat.preco_diaria)} × {nights} {nights === 1 ? "noite" : "noites"}
-                    </span>
-                    <span className="font-semibold text-stone-900 dark:text-stone-100">
-                      {formatCurrency(totalPrice)}
-                    </span>
-                  </div>
+                  {hasCustomPricesInSelection ? (
+                    <div className="flex flex-col gap-1.5">
+                      <span className="text-[11px] font-semibold text-stone-500 uppercase tracking-wider dark:text-stone-400">
+                        Detalhamento por diária ({nights} {nights === 1 ? "noite" : "noites"}):
+                      </span>
+                      <div className="max-h-36 space-y-1 overflow-y-auto pr-1">
+                        {nightlyBreakdown.map((item) => {
+                          const [yyyy, mm, dd] = item.date.split("-");
+                          const formattedDay = `${dd}/${mm}/${yyyy}`;
+                          return (
+                            <div
+                              key={item.date}
+                              className="flex items-center justify-between text-stone-700 dark:text-stone-300"
+                            >
+                              <span className="flex items-center gap-1.5">
+                                <span>{formattedDay}</span>
+                                {item.isCustom && (
+                                  <span className="rounded-sm bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-800 dark:bg-amber-950/70 dark:text-amber-300">
+                                    Tarifa especial
+                                  </span>
+                                )}
+                              </span>
+                              <span className="font-semibold text-stone-900 dark:text-stone-100">
+                                {formatCurrency(item.price)}
+                              </span>
+                            </div>
+                          );
+                        })}
+                      </div>
+                      <div className="my-0.5 border-t border-stone-200/70 dark:border-stone-800" />
+                    </div>
+                  ) : (
+                    <div className="flex justify-between text-stone-700 dark:text-stone-300">
+                      <span>
+                        {formatCurrency(flat.preco_diaria)} × {nights} {nights === 1 ? "noite" : "noites"}
+                      </span>
+                      <span className="font-semibold text-stone-900 dark:text-stone-100">
+                        {formatCurrency(totalPrice)}
+                      </span>
+                    </div>
+                  )}
 
                   <div className="flex justify-between text-sm font-bold text-stone-950 dark:text-stone-50">
                     <span>Total estimado</span>

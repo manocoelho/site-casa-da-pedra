@@ -9,6 +9,7 @@ export interface CreateReservationInput {
   flatId: string;
   dataInicio: string;
   dataFim: string;
+  valorTotal?: number;
 }
 
 export interface ReservationOperationResult<T = Reservation> {

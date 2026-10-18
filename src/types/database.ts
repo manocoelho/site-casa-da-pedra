@@ -112,6 +112,7 @@ export type Database = {
           flat_id: string;
           data_inicio: string;
           data_fim: string;
+          valor_total?: number | null;
           status: Database["public"]["Enums"]["reservation_status"];
           created_at: string;
           updated_at: string;
@@ -122,6 +123,7 @@ export type Database = {
           flat_id: string;
           data_inicio: string;
           data_fim: string;
+          valor_total?: number | null;
           status?: Database["public"]["Enums"]["reservation_status"];
           created_at?: string;
           updated_at?: string;
@@ -132,6 +134,7 @@ export type Database = {
           flat_id?: string;
           data_inicio?: string;
           data_fim?: string;
+          valor_total?: number | null;
           status?: Database["public"]["Enums"]["reservation_status"];
           created_at?: string;
           updated_at?: string;

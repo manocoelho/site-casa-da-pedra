@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import {
+  addDays,
   differenceInCalendarDays,
   format,
   isBefore,
@@ -10,9 +11,11 @@ import {
 } from "date-fns";
 import type { DateRange } from "react-day-picker";
 import { getBrowserReservationsService } from "@/services/reservations";
+import { getBrowserPricingService } from "@/services/pricing";
 import { playSuccessChime } from "@/lib/sound";
 import type { Reservation } from "@/types/entities";
 import type { OccupiedDateRange } from "@/types/reservations";
+import type { DatePriceMap, NightPriceBreakdown } from "@/types/pricing";
 
 interface UseReservationOptions {
   flatId: string;
@@ -23,6 +26,7 @@ interface UseReservationOptions {
 export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservationOptions) {
   const [dateRange, setDateRange] = useState<DateRange | undefined>(undefined);
   const [occupiedRanges, setOccupiedRanges] = useState<OccupiedDateRange[]>([]);
+  const [datePricesMap, setDatePricesMap] = useState<DatePriceMap>({});
   const [isLoadingAvailability, setIsLoadingAvailability] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,13 +34,18 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
 
   const pricePerNight = Number(precoDiaria) || 0;
 
-  // Carrega intervalos ocupados do banco
+  // Carrega intervalos ocupados e preços personalizados do banco
   const loadAvailability = useCallback(async () => {
     setIsLoadingAvailability(true);
     try {
       const reservationsService = getBrowserReservationsService();
-      const ranges = await reservationsService.getOccupiedRanges(flatId);
+      const pricingService = getBrowserPricingService();
+      const [ranges, pricesMap] = await Promise.all([
+        reservationsService.getOccupiedRanges(flatId),
+        pricingService.getDatePricesMap(flatId),
+      ]);
       setOccupiedRanges(ranges);
+      setDatePricesMap(pricesMap);
     } catch (err) {
       console.error("[useReservation] Erro ao carregar disponibilidade:", err);
     } finally {
@@ -47,13 +56,17 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
   useEffect(() => {
     let isMounted = true;
     const reservationsService = getBrowserReservationsService();
+    const pricingService = getBrowserPricingService();
 
-    // 1. Carrega disponibilidade imediata do banco
-    reservationsService
-      .getOccupiedRanges(flatId)
-      .then((ranges) => {
+    // 1. Carrega disponibilidade e preços por data imediatamente do banco
+    Promise.all([
+      reservationsService.getOccupiedRanges(flatId),
+      pricingService.getDatePricesMap(flatId),
+    ])
+      .then(([ranges, pricesMap]) => {
         if (isMounted) {
           setOccupiedRanges(ranges);
+          setDatePricesMap(pricesMap);
           setIsLoadingAvailability(false);
         }
       })
@@ -103,16 +116,52 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
     [occupiedIntervals],
   );
 
-  // Calcula noites e valor total
+  // Retorna o preço aplicável para uma determinada data
+  const getPriceForDate = useCallback(
+    (date: Date): { price: number; isCustom: boolean } => {
+      const key = format(date, "yyyy-MM-dd");
+      const custom = datePricesMap[key];
+      if (typeof custom === "number" && Number.isFinite(custom)) {
+        return { price: custom, isCustom: true };
+      }
+      return { price: pricePerNight, isCustom: false };
+    },
+    [datePricesMap, pricePerNight],
+  );
+
+  // Calcula noites e detalhamento noite a noite
   const nights = useMemo(() => {
     if (!dateRange?.from || !dateRange?.to) return 0;
     const diff = differenceInCalendarDays(dateRange.to, dateRange.from);
     return Math.max(0, diff);
   }, [dateRange]);
 
+  const nightlyBreakdown = useMemo<NightPriceBreakdown[]>(() => {
+    if (!dateRange?.from || !dateRange?.to || nights <= 0) return [];
+    const list: NightPriceBreakdown[] = [];
+    for (let i = 0; i < nights; i++) {
+      const day = addDays(startOfDay(dateRange.from), i);
+      const dateStr = format(day, "yyyy-MM-dd");
+      const customPrice = datePricesMap[dateStr];
+      const isCustom = typeof customPrice === "number" && Number.isFinite(customPrice);
+      list.push({
+        date: dateStr,
+        price: isCustom ? customPrice : pricePerNight,
+        isCustom,
+      });
+    }
+    return list;
+  }, [dateRange, nights, datePricesMap, pricePerNight]);
+
+  const hasCustomPricesInSelection = useMemo(
+    () => nightlyBreakdown.some((item) => item.isCustom),
+    [nightlyBreakdown],
+  );
+
   const totalPrice = useMemo(() => {
-    return nights * pricePerNight;
-  }, [nights, pricePerNight]);
+    if (nightlyBreakdown.length === 0) return 0;
+    return nightlyBreakdown.reduce((acc, item) => acc + item.price, 0);
+  }, [nightlyBreakdown]);
 
   // Validação do intervalo selecionado
   const selectionError = useMemo(() => {
@@ -128,8 +177,7 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
       // Verifica se há alguma data bloqueada no meio do intervalo selecionado
       const daysCount = differenceInCalendarDays(dateRange.to, dateRange.from);
       for (let i = 0; i < daysCount; i++) {
-        const current = new Date(dateRange.from);
-        current.setDate(current.getDate() + i);
+        const current = addDays(startOfDay(dateRange.from), i);
         if (isDateOccupied(current)) {
           return "O período escolhido engloba datas indisponíveis. Selecione outro intervalo.";
         }
@@ -165,6 +213,7 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
         flatId,
         dataInicio,
         dataFim,
+        valorTotal: totalPrice,
       });
 
       if (!result.ok || !result.data) {
@@ -184,7 +233,7 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
     } finally {
       setIsSubmitting(false);
     }
-  }, [canConfirm, dateRange, flatId, loadAvailability, onSuccess]);
+  }, [canConfirm, dateRange, flatId, loadAvailability, onSuccess, totalPrice]);
 
   const resetSelection = useCallback(() => {
     setDateRange(undefined);
@@ -196,6 +245,10 @@ export function useReservation({ flatId, precoDiaria, onSuccess }: UseReservatio
     dateRange,
     setDateRange,
     occupiedIntervals,
+    datePricesMap,
+    getPriceForDate,
+    nightlyBreakdown,
+    hasCustomPricesInSelection,
     isDateOccupied,
     isLoadingAvailability,
     nights,

@@ -160,17 +160,39 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         // Continua para validação no banco
       }
 
-      const { data, error } = await supabase
+      const baseInsertPayload = {
+        user_id: user.id,
+        flat_id: input.flatId,
+        data_inicio: input.dataInicio,
+        data_fim: input.dataFim,
+        status: "pendente" as const,
+      };
+
+      const insertPayload =
+        typeof input.valorTotal === "number" && Number.isFinite(input.valorTotal)
+          ? { ...baseInsertPayload, valor_total: input.valorTotal }
+          : baseInsertPayload;
+
+      let { data, error } = await supabase
         .from("reservations")
-        .insert({
-          user_id: user.id,
-          flat_id: input.flatId,
-          data_inicio: input.dataInicio,
-          data_fim: input.dataFim,
-          status: "pendente",
-        })
+        .insert(insertPayload)
         .select("*")
         .single();
+
+      // Fallback automático caso a coluna valor_total ainda não tenha sido adicionada no Supabase
+      if (
+        error &&
+        "valor_total" in insertPayload &&
+        (error.message?.includes("valor_total") || error.code === "PGRST204")
+      ) {
+        const retry = await supabase
+          .from("reservations")
+          .insert(baseInsertPayload)
+          .select("*")
+          .single();
+        data = retry.data;
+        error = retry.error;
+      }
 
       if (error) {
         // Violação da constraint de sobreposição de datas
@@ -194,7 +216,7 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
 
       return {
         ok: true,
-        data,
+        data: data ?? undefined,
       };
     },
 
