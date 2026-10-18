@@ -69,10 +69,11 @@ export function AdminDashboard({
   const pendingReservationsCount = reservationsHook.stats.pendingCount;
 
   function handlePhotoAdded(photo: FlatPhoto) {
-    if (!activeFlat) return;
+    const targetFlatId = photo.flat_id || activeFlat?.id;
+    if (!targetFlatId) return;
     setFlats((prev) =>
       prev.map((f) =>
-        f.id === activeFlat.id
+        f.id === targetFlatId
           ? { ...f, flat_photos: [...f.flat_photos, photo] }
           : f,
       ),
@@ -87,6 +88,21 @@ export function AdminDashboard({
           ? { ...f, flat_photos: f.flat_photos.filter((p) => p.id !== photoId) }
           : f,
       ),
+    );
+  }
+
+  function handleCoverPhotoChanged(updatedPhoto: FlatPhoto) {
+    const targetFlatId = updatedPhoto.flat_id || activeFlat?.id;
+    if (!targetFlatId) return;
+    setFlats((prev) =>
+      prev.map((f) => {
+        if (f.id !== targetFlatId) return f;
+        const remaining = f.flat_photos.filter((p) => p.id !== updatedPhoto.id);
+        return {
+          ...f,
+          flat_photos: [updatedPhoto, ...remaining],
+        };
+      }),
     );
   }
 
@@ -414,6 +430,7 @@ export function AdminDashboard({
                 flat={activeFlat}
                 onPhotoAdded={handlePhotoAdded}
                 onPhotoDeleted={handlePhotoDeleted}
+                onCoverPhotoChanged={handleCoverPhotoChanged}
               />
 
               {/* Modal de Edição de Dados do Flat */}

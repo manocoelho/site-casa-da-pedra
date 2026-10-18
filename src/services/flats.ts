@@ -134,6 +134,34 @@ export function createFlatsService(supabase: TypedSupabaseClient) {
       }
       return true;
     },
+
+    /**
+     * Define uma foto cadastrada como capa do flat (move para a primeira posição na ordenação).
+     */
+    async setCoverPhoto(photoId: string, currentPhotos: FlatPhoto[]): Promise<FlatPhoto> {
+      const timestamps = currentPhotos
+        .map((p) => new Date(p.created_at).getTime())
+        .filter((t) => Number.isFinite(t));
+
+      const minTime = timestamps.length > 0 ? Math.min(...timestamps) : Date.now();
+      const newCreatedAt = new Date(minTime - 1000).toISOString();
+
+      const { data, error } = await supabase
+        .from("flat_photos")
+        .update({ created_at: newCreatedAt })
+        .eq("id", photoId)
+        .select("*")
+        .single();
+
+      if (error || !data) {
+        console.error(`[flats] setCoverPhoto ${photoId}:`, error?.message);
+        throw new Error(
+          `Falha ao definir foto como capa: ${error?.message || "Erro desconhecido"}`,
+        );
+      }
+
+      return data;
+    },
   };
 }
 

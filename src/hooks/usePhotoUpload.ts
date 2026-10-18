@@ -1,8 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { getBrowserStorageService, validatePhotoFile } from "@/services/storage";
 import type { FlatPhoto } from "@/types/entities";
+
+export interface PhotoUploadItem {
+  id: string;
+  file: File;
+  previewUrl: string;
+  progress: number;
+  status: "pending" | "uploading" | "done" | "error";
+  error?: string;
+}
 
 interface UsePhotoUploadOptions {
   onSuccess?: (photo: FlatPhoto) => void;
@@ -10,109 +19,209 @@ interface UsePhotoUploadOptions {
 }
 
 export function usePhotoUpload(flatId: string, options?: UsePhotoUploadOptions) {
-  const [file, setFile] = useState<File | null>(null);
-  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
-  const [progress, setProgress] = useState<number>(0);
+  const [items, setItems] = useState<PhotoUploadItem[]>([]);
   const [isUploading, setIsUploading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-  // Libera a memória da URL temporária criada para pré-visualização
+  const itemsRef = useRef<PhotoUploadItem[]>([]);
+  useEffect(() => {
+    itemsRef.current = items;
+  }, [items]);
+
+  // Libera memória das URLs temporárias ao desmontar
   useEffect(() => {
     return () => {
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+      for (const item of itemsRef.current) {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
       }
     };
-  }, [previewUrl]);
+  }, []);
 
-  const selectFile = useCallback((selected: File | null) => {
+  const addFiles = useCallback((fileList: FileList | File[] | null) => {
+    if (!fileList) return;
+    const filesArray = Array.from(fileList);
+    if (filesArray.length === 0) return;
+
     setError(null);
     setSuccessMessage(null);
-    setProgress(0);
 
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-      setPreviewUrl(null);
+    const newItems: PhotoUploadItem[] = [];
+    const validationErrors: string[] = [];
+
+    for (const selected of filesArray) {
+      const validation = validatePhotoFile(selected);
+      if (!validation.valid) {
+        validationErrors.push(`${selected.name}: ${validation.error || "Arquivo inválido."}`);
+        continue;
+      }
+
+      const objectUrl = URL.createObjectURL(selected);
+      newItems.push({
+        id: `${selected.name}-${selected.size}-${crypto.randomUUID()}`,
+        file: selected,
+        previewUrl: objectUrl,
+        progress: 0,
+        status: "pending",
+      });
     }
 
-    if (!selected) {
-      setFile(null);
-      return;
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(" | "));
     }
 
-    const validation = validatePhotoFile(selected);
-    if (!validation.valid) {
-      setError(validation.error || "Arquivo inválido.");
-      setFile(null);
-      return;
+    if (newItems.length > 0) {
+      setItems((prev) => [...prev, ...newItems]);
     }
+  }, []);
 
-    setFile(selected);
-    const objectUrl = URL.createObjectURL(selected);
-    setPreviewUrl(objectUrl);
-  }, [previewUrl]);
+  const removeFile = useCallback((id: string) => {
+    setItems((prev) => {
+      const target = prev.find((i) => i.id === id);
+      if (target?.previewUrl) {
+        URL.revokeObjectURL(target.previewUrl);
+      }
+      return prev.filter((i) => i.id !== id);
+    });
+  }, []);
 
   const reset = useCallback(() => {
-    if (previewUrl) {
-      URL.revokeObjectURL(previewUrl);
-    }
-    setFile(null);
-    setPreviewUrl(null);
-    setProgress(0);
+    setItems((prev) => {
+      for (const item of prev) {
+        if (item.previewUrl) {
+          URL.revokeObjectURL(item.previewUrl);
+        }
+      }
+      return [];
+    });
     setError(null);
     setSuccessMessage(null);
     setIsUploading(false);
-  }, [previewUrl]);
+  }, []);
 
   const upload = useCallback(async () => {
-    if (!file || isUploading) return;
+    const toUpload = itemsRef.current.filter(
+      (item) => item.status === "pending" || item.status === "error",
+    );
+    if (toUpload.length === 0 || isUploading) return;
 
     setError(null);
     setSuccessMessage(null);
-    setProgress(5);
     setIsUploading(true);
 
+    const storageService = getBrowserStorageService();
+    let uploadedCount = 0;
+    const failedMessages: string[] = [];
+
     try {
-      const storageService = getBrowserStorageService();
-      const result = await storageService.uploadAndAttachFlatPhoto(flatId, file, {
-        onProgress: (percent) => setProgress(percent),
-      });
+      for (const current of toUpload) {
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === current.id
+              ? { ...item, status: "uploading", progress: 5, error: undefined }
+              : item,
+          ),
+        );
 
-      if (!result.ok) {
-        setError(result.error);
-        options?.onError?.(result.error);
-        setIsUploading(false);
-        return;
+        const result = await storageService.uploadAndAttachFlatPhoto(
+          flatId,
+          current.file,
+          {
+            onProgress: (percent) => {
+              setItems((prev) =>
+                prev.map((item) =>
+                  item.id === current.id ? { ...item, progress: percent } : item,
+                ),
+              );
+            },
+          },
+        );
+
+        if (!result.ok) {
+          failedMessages.push(`${current.file.name}: ${result.error}`);
+          setItems((prev) =>
+            prev.map((item) =>
+              item.id === current.id
+                ? { ...item, status: "error", progress: 0, error: result.error }
+                : item,
+            ),
+          );
+          options?.onError?.(result.error);
+          continue;
+        }
+
+        uploadedCount++;
+        setItems((prev) =>
+          prev.map((item) =>
+            item.id === current.id
+              ? { ...item, status: "done", progress: 100 }
+              : item,
+          ),
+        );
+        options?.onSuccess?.(result.data.photo);
       }
 
-      setProgress(100);
-      setSuccessMessage("Foto enviada e vinculada com sucesso!");
-      options?.onSuccess?.(result.data.photo);
+      if (failedMessages.length === 0) {
+        // Todas as fotos foram enviadas com sucesso: limpa a fila
+        setItems((prev) => {
+          for (const item of prev) {
+            if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+          }
+          return [];
+        });
+        setSuccessMessage(
+          uploadedCount === 1
+            ? "1 foto enviada e vinculada com sucesso!"
+            : `${uploadedCount} fotos enviadas e vinculadas com sucesso!`,
+        );
+      } else {
+        // Mantém apenas as que falharam para o usuário tentar novamente ou remover
+        setItems((prev) => {
+          const remaining: PhotoUploadItem[] = [];
+          for (const item of prev) {
+            if (item.status === "done") {
+              if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+            } else {
+              remaining.push(item);
+            }
+          }
+          return remaining;
+        });
 
-      // Limpa a seleção após envio bem-sucedido
-      if (previewUrl) {
-        URL.revokeObjectURL(previewUrl);
+        if (uploadedCount > 0) {
+          setSuccessMessage(
+            `${uploadedCount} ${uploadedCount === 1 ? "foto enviada" : "fotos enviadas"} com sucesso.`,
+          );
+        }
+        setError(`Falha em ${failedMessages.length} arquivo(s): ${failedMessages.join(" | ")}`);
       }
-      setFile(null);
-      setPreviewUrl(null);
     } catch (err) {
-      const msg = err instanceof Error ? err.message : "Erro inesperado ao realizar upload.";
+      const msg =
+        err instanceof Error ? err.message : "Erro inesperado ao realizar upload.";
       setError(msg);
       options?.onError?.(msg);
     } finally {
       setIsUploading(false);
     }
-  }, [file, isUploading, flatId, previewUrl, options]);
+  }, [flatId, isUploading, options]);
+
+  // Progresso médio geral do lote
+  const overallProgress = useMemo(() => {
+    if (items.length === 0) return 0;
+    const sum = items.reduce((acc, i) => acc + i.progress, 0);
+    return Math.round(sum / items.length);
+  }, [items]);
 
   return {
-    file,
-    previewUrl,
-    progress,
+    items,
+    overallProgress,
     isUploading,
     error,
     successMessage,
-    selectFile,
+    addFiles,
+    removeFile,
     upload,
     reset,
   };
