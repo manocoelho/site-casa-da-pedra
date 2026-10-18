@@ -4,7 +4,7 @@ import Link from "next/link";
 import { differenceInCalendarDays, format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Spinner } from "@/components/ui/Spinner";
-import { ChatIcon, CheckIcon } from "@/components/ui/icons";
+import { ChatIcon, CheckIcon, TrashIcon } from "@/components/ui/icons";
 import { formatCurrency } from "@/lib/format";
 import type { ReservationStatus } from "@/types/entities";
 import type { AdminReservation } from "@/types/reservations";
@@ -12,13 +12,21 @@ import type { AdminReservation } from "@/types/reservations";
 interface AdminReservationsTableProps {
   reservations: AdminReservation[];
   onUpdateStatus: (id: string, status: ReservationStatus) => void;
+  onDeleteReservation: (
+    id: string,
+    currentStatus: ReservationStatus,
+    guestName?: string,
+  ) => void;
   updatingId: string | null;
+  deletingId: string | null;
 }
 
 export function AdminReservationsTable({
   reservations,
   onUpdateStatus,
+  onDeleteReservation,
   updatingId,
+  deletingId,
 }: AdminReservationsTableProps) {
   function formatPeriod(startIso: string, endIso: string) {
     try {
@@ -82,6 +90,8 @@ export function AdminReservationsTable({
         <tbody className="divide-y divide-stone-100 dark:divide-stone-800">
           {reservations.map((r) => {
             const isUpdating = updatingId === r.id;
+            const isDeleting = deletingId === r.id;
+            const isBusy = isUpdating || isDeleting;
             const guestName = r.users?.nome || "Hóspede";
             const guestEmail = r.users?.email || "";
             const initial = guestName.charAt(0).toUpperCase() || "?";
@@ -167,7 +177,7 @@ export function AdminReservationsTable({
                       <>
                         <button
                           type="button"
-                          disabled={isUpdating}
+                          disabled={isBusy}
                           onClick={() => onUpdateStatus(r.id, "confirmada")}
                           className="inline-flex h-8 items-center justify-center rounded-lg bg-emerald-600 px-3 text-xs font-semibold text-white transition hover:bg-emerald-700 disabled:opacity-50"
                         >
@@ -175,7 +185,7 @@ export function AdminReservationsTable({
                         </button>
                         <button
                           type="button"
-                          disabled={isUpdating}
+                          disabled={isBusy}
                           onClick={() => onUpdateStatus(r.id, "cancelada")}
                           className="inline-flex h-8 items-center justify-center rounded-lg border border-red-200 px-2.5 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900/60 dark:text-red-400 dark:hover:bg-red-950/40"
                         >
@@ -188,7 +198,7 @@ export function AdminReservationsTable({
                       <>
                         <button
                           type="button"
-                          disabled={isUpdating}
+                          disabled={isBusy}
                           onClick={() => onUpdateStatus(r.id, "concluida")}
                           className="inline-flex h-8 items-center justify-center rounded-lg bg-blue-600 px-3 text-xs font-semibold text-white transition hover:bg-blue-700 disabled:opacity-50"
                         >
@@ -196,7 +206,7 @@ export function AdminReservationsTable({
                         </button>
                         <button
                           type="button"
-                          disabled={isUpdating}
+                          disabled={isBusy}
                           onClick={() => onUpdateStatus(r.id, "cancelada")}
                           className="inline-flex h-8 items-center justify-center rounded-lg border border-stone-200 px-2.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
                         >
@@ -208,7 +218,7 @@ export function AdminReservationsTable({
                     {r.status === "cancelada" && (
                       <button
                         type="button"
-                        disabled={isUpdating}
+                        disabled={isBusy}
                         onClick={() => onUpdateStatus(r.id, "pendente")}
                         className="inline-flex h-8 items-center justify-center rounded-lg border border-stone-200 px-2.5 text-xs font-medium text-stone-600 transition hover:bg-stone-100 disabled:opacity-50 dark:border-stone-700 dark:text-stone-300 dark:hover:bg-stone-800"
                       >
@@ -217,8 +227,31 @@ export function AdminReservationsTable({
                     )}
 
                     {r.status === "concluida" && (
-                      <span className="text-xs text-stone-400">Finalizada</span>
+                      <span className="px-1 text-xs text-stone-400">Finalizada</span>
                     )}
+
+                    {/* Botão de Excluir Pedido (se pendente, recusa automaticamente e exclui) */}
+                    <button
+                      type="button"
+                      disabled={isBusy}
+                      onClick={() => onDeleteReservation(r.id, r.status, guestName)}
+                      title={
+                        r.status === "pendente"
+                          ? "Recusar automaticamente e excluir este pedido"
+                          : "Excluir pedido de reserva"
+                      }
+                      aria-label={`Excluir pedido de ${guestName}`}
+                      className="inline-flex h-8 items-center justify-center gap-1 rounded-lg border border-red-200/80 bg-red-50/50 px-2.5 text-xs font-medium text-red-600 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-950/70"
+                    >
+                      {isDeleting ? (
+                        <Spinner className="size-3.5" />
+                      ) : (
+                        <>
+                          <TrashIcon className="size-3.5" />
+                          <span>Excluir</span>
+                        </>
+                      )}
+                    </button>
                   </div>
                 </td>
               </tr>

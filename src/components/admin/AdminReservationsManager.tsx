@@ -30,6 +30,7 @@ export function AdminReservationsManager({
     allReservations,
     isLoading,
     updatingId,
+    deletingId,
     error,
     stats,
     filterStatus,
@@ -42,6 +43,7 @@ export function AdminReservationsManager({
     toggleSound,
     testSound,
     updateStatus,
+    deleteReservation,
   } = reservationsHook;
 
   const filterTabs: Array<{ id: AdminReservationFilter; label: string; count: number }> = [
@@ -260,7 +262,9 @@ export function AdminReservationsManager({
         <AdminReservationsTable
           reservations={reservations}
           onUpdateStatus={updateStatus}
+          onDeleteReservation={deleteReservation}
           updatingId={updatingId}
+          deletingId={deletingId}
         />
       )}
     </div>

@@ -315,6 +315,39 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
         data,
       };
     },
+
+    /**
+     * Exclui um pedido de reserva no painel administrativo.
+     * Caso o pedido ainda esteja pendente (não confirmado), marca-o automaticamente como recusado ('cancelada') antes de excluir.
+     */
+    async deleteReservation(
+      reservationId: string,
+      currentStatus?: ReservationStatus,
+    ): Promise<ReservationOperationResult<null>> {
+      if (currentStatus === "pendente") {
+        await supabase
+          .from("reservations")
+          .update({ status: "cancelada" })
+          .eq("id", reservationId);
+      }
+
+      const { error } = await supabase
+        .from("reservations")
+        .delete()
+        .eq("id", reservationId);
+
+      if (error) {
+        return {
+          ok: false,
+          error: `Falha ao excluir pedido de reserva: ${error.message}`,
+        };
+      }
+
+      return {
+        ok: true,
+        data: null,
+      };
+    },
   };
 }
 

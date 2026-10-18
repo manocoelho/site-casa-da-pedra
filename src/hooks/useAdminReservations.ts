@@ -275,6 +275,58 @@ export function useAdminReservations({
     [],
   );
 
+  // Exclusão de pedido de reserva (se pendente, marca como recusado antes de excluir)
+  const [deletingId, setDeletingId] = useState<string | null>(null);
+
+  const deleteReservation = useCallback(
+    async (
+      reservationId: string,
+      currentStatus: ReservationStatus,
+      guestName?: string,
+    ) => {
+      const displayGuest = guestName || "este hóspede";
+      const confirmMsg =
+        currentStatus === "pendente"
+          ? `Este pedido ainda não foi confirmado. Deseja recusá-lo automaticamente e excluí-lo da lista (${displayGuest})?`
+          : `Tem certeza que deseja excluir o pedido de reserva de "${displayGuest}"?`;
+
+      if (typeof window !== "undefined" && !window.confirm(confirmMsg)) {
+        return;
+      }
+
+      setError(null);
+      setDeletingId(reservationId);
+
+      // Se estava pendente, reflete imediatamente o status recusado/cancelado antes de remover
+      if (currentStatus === "pendente") {
+        setReservations((prev) =>
+          prev.map((r) =>
+            r.id === reservationId ? { ...r, status: "cancelada" } : r,
+          ),
+        );
+      }
+
+      try {
+        const service = getBrowserReservationsService();
+        const result = await service.deleteReservation(reservationId, currentStatus);
+
+        if (!result.ok) {
+          setError(result.error || "Falha ao excluir o pedido de reserva.");
+          return;
+        }
+
+        setReservations((prev) => prev.filter((r) => r.id !== reservationId));
+        setNewAlert((prev) => (prev?.id === reservationId ? null : prev));
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Erro ao excluir reserva.";
+        setError(msg);
+      } finally {
+        setDeletingId(null);
+      }
+    },
+    [],
+  );
+
   // Métricas gerais
   const stats = useMemo(() => {
     const totalCount = reservations.length;
@@ -344,6 +396,7 @@ export function useAdminReservations({
     allReservations: reservations,
     isLoading,
     updatingId,
+    deletingId,
     error,
     stats,
     filterStatus,
@@ -356,6 +409,7 @@ export function useAdminReservations({
     toggleSound,
     testSound,
     updateStatus,
+    deleteReservation,
     refresh: loadReservations,
   };
 }
