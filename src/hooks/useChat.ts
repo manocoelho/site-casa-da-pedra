@@ -79,6 +79,20 @@ export function useChat(
           }
         },
       )
+      .on(
+        "postgres_changes",
+        {
+          event: "DELETE",
+          schema: "public",
+          table: "messages",
+        },
+        (payload) => {
+          const deletedId = (payload.old as { id?: string })?.id;
+          if (deletedId && isMounted) {
+            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+          }
+        },
+      )
       .subscribe();
 
     // 3. Cleanup: desinscreve e remove o canal ao desmontar ou trocar de interlocutor

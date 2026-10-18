@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { format, isToday, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { SearchIcon, ShieldIcon, UserIcon } from "@/components/ui/icons";
+import { SearchIcon, ShieldIcon, TrashIcon, UserIcon } from "@/components/ui/icons";
 import { useChatNotifications } from "@/context/ChatNotificationContext";
 import type { ChatConversation } from "@/types/chat";
 import type { UserProfile } from "@/types/entities";
@@ -12,6 +12,8 @@ interface ChatSidebarProps {
   conversations: ChatConversation[];
   activeInterlocutorId?: string;
   onSelectConversation: (interlocutorId: string) => void;
+  onDeleteConversation?: (interlocutorId: string, interlocutorName: string) => void;
+  deletingInterlocutorId?: string | null;
   adminContact?: UserProfile | null;
   isAdmin: boolean;
   className?: string;
@@ -21,6 +23,8 @@ export function ChatSidebar({
   conversations,
   activeInterlocutorId,
   onSelectConversation,
+  onDeleteConversation,
+  deletingInterlocutorId,
   adminContact,
   isAdmin,
   className = "",
@@ -134,17 +138,21 @@ export function ChatSidebar({
               const isSelected = activeInterlocutorId === conv.interlocutorId;
               const initial = conv.interlocutorNome.charAt(0).toUpperCase() || "?";
               const unread = unreadBySender[conv.interlocutorId] || 0;
+              const isDeletingThis = deletingInterlocutorId === conv.interlocutorId;
 
               return (
-                <li key={conv.interlocutorId}>
+                <li
+                  key={conv.interlocutorId}
+                  className={`group flex items-center transition ${
+                    isSelected
+                      ? "bg-amber-50/80 dark:bg-amber-950/40"
+                      : "hover:bg-stone-50 dark:hover:bg-stone-800/40"
+                  }`}
+                >
                   <button
                     type="button"
                     onClick={() => onSelectConversation(conv.interlocutorId)}
-                    className={`flex w-full items-center gap-3 p-3.5 text-left transition ${
-                      isSelected
-                        ? "bg-amber-50/80 dark:bg-amber-950/40"
-                        : "hover:bg-stone-50 dark:hover:bg-stone-800/40"
-                    }`}
+                    className="flex min-w-0 flex-1 items-center gap-3 p-3.5 text-left"
                   >
                     {/* Avatar */}
                     <div className="relative shrink-0">
@@ -212,6 +220,22 @@ export function ChatSidebar({
                       </div>
                     </div>
                   </button>
+
+                  {isAdmin && onDeleteConversation && (
+                    <button
+                      type="button"
+                      disabled={isDeletingThis}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onDeleteConversation(conv.interlocutorId, conv.interlocutorNome);
+                      }}
+                      title={`Encerrar e excluir conversa com ${conv.interlocutorNome}`}
+                      aria-label={`Encerrar e excluir conversa com ${conv.interlocutorNome}`}
+                      className="mr-2.5 flex size-8 shrink-0 items-center justify-center rounded-lg text-stone-400 opacity-70 transition hover:bg-red-50 hover:text-red-600 group-hover:opacity-100 disabled:opacity-40 dark:hover:bg-red-950/50 dark:hover:text-red-400"
+                    >
+                      <TrashIcon className="size-4" />
+                    </button>
+                  )}
                 </li>
               );
             })}

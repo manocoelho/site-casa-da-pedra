@@ -2,7 +2,7 @@
 
 import { useEffect } from "react";
 import { Alert } from "@/components/ui/Alert";
-import { ChevronLeftIcon, ShieldIcon } from "@/components/ui/icons";
+import { ChevronLeftIcon, ShieldIcon, TrashIcon } from "@/components/ui/icons";
 import { ChatInput } from "@/components/chat/ChatInput";
 import { ChatMessageList } from "@/components/chat/ChatMessageList";
 import { useChatNotifications } from "@/context/ChatNotificationContext";
@@ -13,6 +13,9 @@ interface ChatWindowProps {
   receiverId?: string;
   interlocutorName: string;
   interlocutorRole?: "admin" | "client";
+  isAdmin?: boolean;
+  onDeleteConversation?: () => void;
+  isDeletingConversation?: boolean;
   onBack?: () => void;
   className?: string;
 }
@@ -22,6 +25,9 @@ export function ChatWindow({
   receiverId,
   interlocutorName,
   interlocutorRole,
+  isAdmin = false,
+  onDeleteConversation,
+  isDeletingConversation = false,
   onBack,
   className = "",
 }: ChatWindowProps) {
@@ -48,7 +54,7 @@ export function ChatWindow({
     >
       {/* Top Bar da conversa */}
       <div className="flex h-16 items-center justify-between border-b border-stone-200 px-4 dark:border-stone-800">
-        <div className="flex items-center gap-3">
+        <div className="flex min-w-0 items-center gap-3">
           {onBack && (
             <button
               type="button"
@@ -70,13 +76,13 @@ export function ChatWindow({
             {initial}
           </div>
 
-          <div>
+          <div className="min-w-0">
             <div className="flex items-center gap-2">
-              <h3 className="text-sm font-bold text-stone-900 dark:text-stone-100">
+              <h3 className="truncate text-sm font-bold text-stone-900 dark:text-stone-100">
                 {interlocutorName}
               </h3>
               {interlocutorRole === "admin" && (
-                <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
+                <span className="inline-flex shrink-0 items-center gap-0.5 rounded-full bg-amber-100 px-1.5 py-0.2 text-[10px] font-semibold text-amber-900 dark:bg-amber-900/60 dark:text-amber-200">
                   <ShieldIcon className="size-2.5" />
                   Administração
                 </span>
@@ -88,6 +94,19 @@ export function ChatWindow({
             </div>
           </div>
         </div>
+
+        {isAdmin && receiverId && onDeleteConversation && (
+          <button
+            type="button"
+            onClick={onDeleteConversation}
+            disabled={isDeletingConversation}
+            title="Encerrar e excluir esta conversa"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-xl border border-red-200 bg-red-50/70 px-3 py-1.5 text-xs font-semibold text-red-600 transition hover:bg-red-100 disabled:opacity-50 dark:border-red-900/60 dark:bg-red-950/40 dark:text-red-400 dark:hover:bg-red-950/70"
+          >
+            <TrashIcon className="size-3.5" />
+            <span>{isDeletingConversation ? "Encerrando..." : "Encerrar conversa"}</span>
+          </button>
+        )}
       </div>
 
       {/* Alerta de erro */}

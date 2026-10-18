@@ -315,6 +315,54 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
 
       return Array.from(map.values());
     },
+
+    /**
+     * Encerra e exclui todas as mensagens da conversa com um interlocutor (uso administrativo).
+     */
+    async deleteConversation(
+      interlocutorId: string,
+    ): Promise<{ ok: boolean; error?: string }> {
+      if (!interlocutorId) {
+        return { ok: false, error: "ID do contato inválido." };
+      }
+
+      // 1. Tenta via RPC SECURITY DEFINER (delete_conversation_messages)
+      try {
+        type RpcClient = {
+          rpc: (
+            fn: string,
+            args: { p_interlocutor_id: string },
+          ) => Promise<{ error: { message: string } | null }>;
+        };
+
+        const { error: rpcError } = await (
+          supabase as unknown as RpcClient
+        ).rpc("delete_conversation_messages", {
+          p_interlocutor_id: interlocutorId,
+        });
+
+        if (!rpcError) {
+          return { ok: true };
+        }
+      } catch {
+        // Continua para fallback direto
+      }
+
+      // 2. Fallback: exclusão direta na tabela messages (requer policy DELETE para admin)
+      const { error } = await supabase
+        .from("messages")
+        .delete()
+        .or(`sender_id.eq.${interlocutorId},receiver_id.eq.${interlocutorId}`);
+
+      if (error) {
+        return {
+          ok: false,
+          error: `Não foi possível excluir as mensagens no banco: ${error.message}`,
+        };
+      }
+
+      return { ok: true };
+    },
   };
 }
 
