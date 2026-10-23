@@ -26,6 +26,8 @@ export const defaultSiteSettings: SiteSettingsData = {
   whatsapp: siteConfig.contact.whatsapp,
   instagram: siteConfig.contact.instagram,
   email: siteConfig.contact.email,
+  pix_discount_percent: 10,
+  max_installments: 6,
 };
 
 export function createSiteSettingsService(supabase: TypedSupabaseClient) {
@@ -81,6 +83,16 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
           whatsapp: row.whatsapp || defaultSiteSettings.whatsapp,
           instagram: row.instagram || defaultSiteSettings.instagram,
           email: row.email || defaultSiteSettings.email,
+          pix_discount_percent:
+            typeof row.pix_discount_percent === "number" &&
+            Number.isFinite(row.pix_discount_percent)
+              ? Number(row.pix_discount_percent)
+              : defaultSiteSettings.pix_discount_percent,
+          max_installments:
+            typeof row.max_installments === "number" &&
+            Number.isFinite(row.max_installments)
+              ? Number(row.max_installments)
+              : defaultSiteSettings.max_installments,
         };
       } catch (err) {
         console.warn("[siteSettings] Usando fallback padrão:", err);
@@ -114,12 +126,14 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
 
         let warning: string | undefined;
 
-        // Se o banco ainda não possuir as novas colunas de enquadramento ou seção de flats
+        // Se o banco ainda não possuir as novas colunas de enquadramento, seção de flats ou pagamento
         if (
           error &&
           (error.message.includes("cover_fit") ||
             error.message.includes("cover_position") ||
-            error.message.includes("flats_section"))
+            error.message.includes("flats_section") ||
+            error.message.includes("pix_discount_percent") ||
+            error.message.includes("max_installments"))
         ) {
           const {
             cover_fit: _cf,
@@ -127,6 +141,8 @@ export function createSiteSettingsService(supabase: TypedSupabaseClient) {
             flats_section_tag: _fst,
             flats_section_title: _fsti,
             flats_section_subtitle: _fss,
+            pix_discount_percent: _pdp,
+            max_installments: _mi,
             ...legacyValues
           } = values;
           const retry = await untypedClient

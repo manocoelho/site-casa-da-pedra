@@ -159,6 +159,8 @@ export default async function FlatDetailsPage({ params }: FlatPageProps) {
             isAuthenticated={isAuthenticated}
             whatsapp={siteSettings.whatsapp}
             instagram={siteSettings.instagram}
+            pixDiscountPercent={siteSettings.pix_discount_percent}
+            maxInstallments={siteSettings.max_installments}
           />
         </div>
       </div>

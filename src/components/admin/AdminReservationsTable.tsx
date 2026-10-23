@@ -149,14 +149,45 @@ export function AdminReservationsTable({
 
                 {/* Valor Total */}
                 <td className="px-5 py-4">
-                  <span className="font-bold text-stone-900 dark:text-stone-100">
-                    {formatCurrency(totalPrice)}
-                  </span>
+                  <div className="flex flex-col gap-0.5">
+                    <span className="font-bold text-stone-900 dark:text-stone-100">
+                      {formatCurrency(totalPrice)}
+                    </span>
+                    {r.metodo_pagamento && (
+                      <span className="text-[11px] font-medium text-stone-500 dark:text-stone-400">
+                        {r.metodo_pagamento === "pix"
+                          ? "Via Pix"
+                          : "Via Cartão"}
+                        {typeof r.valor_desconto === "number" &&
+                        r.valor_desconto > 0
+                          ? ` (-${formatCurrency(r.valor_desconto)})`
+                          : ""}
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* Status */}
                 <td className="px-5 py-4">
-                  {renderStatusBadge(r.status)}
+                  <div className="flex flex-col items-start gap-1">
+                    {renderStatusBadge(r.status)}
+                    {r.status_pagamento === "aprovado" && (
+                      <span className="rounded-md bg-emerald-50 px-1.5 py-0.5 text-[10px] font-bold text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300">
+                        Pago (Mercado Pago)
+                      </span>
+                    )}
+                    {r.status_pagamento === "pendente" &&
+                      r.status === "pendente" && (
+                        <span className="rounded-md bg-amber-50 px-1.5 py-0.5 text-[10px] font-semibold text-amber-700 dark:bg-amber-950/60 dark:text-amber-300">
+                          Aguardando pagamento
+                        </span>
+                      )}
+                    {r.status_pagamento === "expirado" && (
+                      <span className="rounded-md bg-stone-100 px-1.5 py-0.5 text-[10px] font-medium text-stone-500 dark:bg-stone-800 dark:text-stone-400">
+                        Prazo Pix expirado
+                      </span>
+                    )}
+                  </div>
                 </td>
 
                 {/* Ações */}

@@ -28,4 +28,8 @@ export const env = {
   get siteUrl(): string | undefined {
     return process.env.NEXT_PUBLIC_SITE_URL || undefined;
   },
+  /** Chave pública do Mercado Pago (NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY). */
+  get mercadoPagoPublicKey(): string | undefined {
+    return process.env.NEXT_PUBLIC_MERCADO_PAGO_PUBLIC_KEY || undefined;
+  },
 };

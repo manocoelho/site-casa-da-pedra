@@ -514,6 +514,58 @@ export function AdminSiteContentManager({
             </div>
           </div>
 
+          {/* Seção 5: Regras de Pagamento Online (Mercado Pago) */}
+          <div className="rounded-3xl border border-stone-200 bg-white p-6 shadow-xs dark:border-stone-800 dark:bg-stone-900">
+            <h3 className="text-base font-bold text-stone-900 dark:text-stone-50">
+              Pagamentos Online (Mercado Pago — Pix & Cartão)
+            </h3>
+            <p className="mt-1 text-xs text-stone-500">
+              Personalize o percentual de desconto automático no Pix e o limite de parcelas no Cartão de Crédito (com juros para o comprador).
+            </p>
+
+            <div className="mt-5 grid grid-cols-1 gap-4 sm:grid-cols-2">
+              <TextField
+                label="Desconto no Pix (%)"
+                name="pix_discount_percent"
+                type="number"
+                min={0}
+                max={50}
+                step="1"
+                value={String(settings.pix_discount_percent ?? 10)}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    pix_discount_percent: Math.max(
+                      0,
+                      Math.min(50, Number(e.target.value) || 0),
+                    ),
+                  }))
+                }
+                placeholder="10"
+              />
+
+              <TextField
+                label="Máximo de Parcelas no Cartão"
+                name="max_installments"
+                type="number"
+                min={1}
+                max={12}
+                step="1"
+                value={String(settings.max_installments ?? 6)}
+                onChange={(e) =>
+                  setSettings((s) => ({
+                    ...s,
+                    max_installments: Math.max(
+                      1,
+                      Math.min(12, Number(e.target.value) || 6),
+                    ),
+                  }))
+                }
+                placeholder="6"
+              />
+            </div>
+          </div>
+
           {/* Botão de Salvar */}
           <div className="flex justify-end gap-3">
             <Button

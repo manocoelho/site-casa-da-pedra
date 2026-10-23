@@ -15,6 +15,8 @@ export interface SiteSettingsData {
   whatsapp: string;
   instagram: string;
   email: string;
+  pix_discount_percent?: number;
+  max_installments?: number;
 }
 
 export type SiteSettingsUpdate = Partial<SiteSettingsData>;

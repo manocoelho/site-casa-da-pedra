@@ -7,3 +7,5 @@ export type * from "./chat";
 export type * from "./storage";
 export type * from "./ical";
 export type * from "./pricing";
+export type * from "./payments";
+
