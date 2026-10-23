@@ -216,8 +216,10 @@ export function ChatLayout({
   );
 
   const interlocutorName =
-    activeConversation?.interlocutorNome ||
-    (activeInterlocutorId === adminContact?.id ? adminContact?.nome || "Anfitrião Casa da Pedra" : "Contato");
+    (!isAdmin ? "Hemanoel Epitácio" : activeConversation?.interlocutorNome) ||
+    (activeInterlocutorId === adminContact?.id
+      ? adminContact?.nome || "Hemanoel Epitácio"
+      : "Contato");
 
   const interlocutorRole: "admin" | "client" =
     activeConversation?.interlocutorRole || (isAdmin ? "client" : "admin");

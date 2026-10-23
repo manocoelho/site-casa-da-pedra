@@ -18,25 +18,34 @@ interface RpcConversationRow {
   ultimo_timestamp: string;
 }
 
+const OWNER_DISPLAY_NAME = "Hemanoel Epitácio";
+
 export function createMessagesService(supabase: TypedSupabaseClient) {
   return {
     /**
-     * Retorna o perfil de um administrador para servir de contato padrão aos clientes.
+     * Retorna o perfil do proprietário/administrador para servir de contato padrão aos clientes.
      */
     async getAdminContact(): Promise<UserProfile | null> {
       const { data, error } = await supabase
         .from("users")
         .select("*")
-        .eq("role", "admin")
-        .limit(1)
-        .maybeSingle();
+        .eq("role", "admin");
 
-      if (error) {
-        console.warn("[messages] Erro ao buscar contato do admin:", error.message);
+      if (error || !data || data.length === 0) {
+        if (error) {
+          console.warn("[messages] Erro ao buscar contato do admin:", error.message);
+        }
         return null;
       }
 
-      return data;
+      const ownerProfile =
+        data.find((u) => (u.nome || "").toLowerCase().includes("hemanoel")) ||
+        data[0];
+
+      return {
+        ...ownerProfile,
+        nome: OWNER_DISPLAY_NAME,
+      };
     },
 
     /**
@@ -203,14 +212,26 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
         ).rpc("get_user_conversations");
 
         if (!rpcError && Array.isArray(rpcData)) {
-          return rpcData.map((row) => ({
+          const mapped = rpcData.map((row) => ({
             interlocutorId: row.interlocutor_id,
-            interlocutorNome: row.interlocutor_nome,
+            interlocutorNome:
+              row.interlocutor_role === "admin"
+                ? OWNER_DISPLAY_NAME
+                : row.interlocutor_nome,
             interlocutorEmail: row.interlocutor_email,
             interlocutorRole: row.interlocutor_role,
             ultimoConteudo: row.ultimo_conteudo,
             ultimoTimestamp: row.ultimo_timestamp,
           }));
+
+          // Se for cliente conversando com a administração, unifica múltiplos admins em uma única conversa com o proprietário
+          let seenAdmin = false;
+          return mapped.filter((item) => {
+            if (item.interlocutorRole !== "admin") return true;
+            if (seenAdmin) return false;
+            seenAdmin = true;
+            return true;
+          });
         }
       } catch (err) {
         console.warn("[messages] RPC get_user_conversations indisponível, usando fallback:", err);
@@ -305,8 +326,8 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
         if (!map.has(otherId)) {
           map.set(otherId, {
             interlocutorId: otherId,
-            interlocutorNome: "Usuário",
-            interlocutorRole: "client",
+            interlocutorNome: OWNER_DISPLAY_NAME,
+            interlocutorRole: "admin",
             ultimoConteudo: msg.conteudo,
             ultimoTimestamp: msg.timestamp,
           });

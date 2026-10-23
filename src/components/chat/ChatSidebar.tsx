@@ -57,7 +57,10 @@ export function ChatSidebar({
 
   const hasAdminInList =
     adminContact &&
-    conversations.some((c) => c.interlocutorId === adminContact.id);
+    conversations.some(
+      (c) =>
+        c.interlocutorId === adminContact.id || c.interlocutorRole === "admin",
+    );
 
   return (
     <aside
