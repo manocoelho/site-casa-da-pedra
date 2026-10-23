@@ -10,8 +10,6 @@ import {
 } from "@/lib/mercadopago";
 import type { CreatePaymentRequest, CreatePaymentResponse } from "@/types";
 
-export const dynamic = "force-dynamic";
-
 function calculateStayTotal(
   dataInicio: string,
   dataFim: string,

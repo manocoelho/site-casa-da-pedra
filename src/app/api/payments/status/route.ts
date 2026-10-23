@@ -6,8 +6,6 @@ import {
 } from "@/lib/mercadopago";
 import type { PaymentStatus, PaymentStatusResponse } from "@/types";
 
-export const dynamic = "force-dynamic";
-
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
