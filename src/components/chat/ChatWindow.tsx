@@ -120,7 +120,9 @@ export function ChatWindow({
       <ChatMessageList
         messages={messages}
         currentUserId={userId}
+        receiverId={receiverId}
         interlocutorName={interlocutorName}
+        interlocutorRole={interlocutorRole}
         isLoading={isLoading}
       />
 

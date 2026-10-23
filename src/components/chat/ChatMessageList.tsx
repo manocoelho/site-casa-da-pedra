@@ -10,7 +10,9 @@ import type { ChatMessage } from "@/types/chat";
 interface ChatMessageListProps {
   messages: ChatMessage[];
   currentUserId: string;
+  receiverId?: string;
   interlocutorName: string;
+  interlocutorRole?: "admin" | "client";
   isLoading?: boolean;
   className?: string;
 }
@@ -18,7 +20,9 @@ interface ChatMessageListProps {
 export function ChatMessageList({
   messages,
   currentUserId,
+  receiverId,
   interlocutorName,
+  interlocutorRole,
   isLoading = false,
   className = "",
 }: ChatMessageListProps) {
@@ -67,7 +71,14 @@ export function ChatMessageList({
       className={`flex-1 overflow-y-auto p-4 space-y-3 bg-stone-50/60 dark:bg-stone-950/40 ${className}`}
     >
       {messages.map((msg) => {
-        const isMine = msg.sender_id === currentUserId;
+        // Se quem está visualizando é um Admin (interlocutorRole === 'client'),
+        // todas as mensagens que não foram enviadas pelo cliente pertencem à Administração (lado direito).
+        // Se quem está visualizando é um Cliente, as mensagens enviadas por ele ficam do lado direito
+        // e todas as respostas de qualquer Admin ficam do lado esquerdo como Hemanoel Epitácio.
+        const isMine =
+          interlocutorRole === "client" && receiverId
+            ? msg.sender_id !== receiverId
+            : msg.sender_id === currentUserId;
 
         return (
           <div

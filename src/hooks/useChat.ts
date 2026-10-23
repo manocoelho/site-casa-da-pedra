@@ -41,63 +41,83 @@ export function useChat(
       });
 
     // 2. Inscreve no canal Supabase Realtime para receber novas mensagens instantaneamente
-    const channelName = `chat-thread:${userId}:${receiverId}`;
-    const channel = supabase
-      .channel(channelName)
-      .on(
+    const handleIncomingMessage = (newMsg: ChatMessage) => {
+      if (!newMsg || !newMsg.id) return;
+
+      // Determina o ID do cliente da conversa (ponto de convergência da thread)
+      const targetClientId =
+        interlocutorRole === "client"
+          ? receiverId
+          : interlocutorRole === "admin"
+            ? userId
+            : null;
+
+      // Qualquer mensagem de/para o hóspede pertence a esta conversa unificada
+      const belongsToConversation = targetClientId
+        ? newMsg.sender_id === targetClientId || newMsg.receiver_id === targetClientId
+        : (newMsg.sender_id === userId && newMsg.receiver_id === receiverId) ||
+          (newMsg.sender_id === receiverId && newMsg.receiver_id === userId);
+
+      if (belongsToConversation && isMounted) {
+        setMessages((prev) => {
+          if (prev.some((m) => m.id === newMsg.id)) {
+            return prev;
+          }
+          return [...prev, newMsg];
+        });
+      }
+    };
+
+    const baseChannel = supabase.channel("chat-messages-broadcast");
+    const channel = (
+      baseChannel.on(
         "postgres_changes",
         {
-          event: "INSERT",
+          event: "*",
           schema: "public",
           table: "messages",
         },
         (payload) => {
-          const newMsg = payload.new as ChatMessage;
-
-          // Determina o ID do cliente da conversa (ponto de convergência da thread)
-          const targetClientId =
-            interlocutorRole === "client"
-              ? receiverId
-              : interlocutorRole === "admin"
-                ? userId
-                : null;
-
-          // Se for atendimento entre hóspede e pousada:
-          // qualquer mensagem de/para o hóspede pertence a esta conversa
-          const belongsToConversation = targetClientId
-            ? newMsg.sender_id === targetClientId || newMsg.receiver_id === targetClientId
-            : (newMsg.sender_id === userId && newMsg.receiver_id === receiverId) ||
-              (newMsg.sender_id === receiverId && newMsg.receiver_id === userId);
-
-          if (belongsToConversation && isMounted) {
-            setMessages((prev) => {
-              if (prev.some((m) => m.id === newMsg.id)) {
-                return prev;
-              }
-              return [...prev, newMsg];
-            });
+          if (payload.eventType === "INSERT" && payload.new) {
+            handleIncomingMessage(payload.new as ChatMessage);
+          } else if (payload.eventType === "DELETE" && payload.old) {
+            const deletedId = (payload.old as { id?: string })?.id;
+            if (deletedId && isMounted) {
+              setMessages((prev) => prev.filter((m) => m.id !== deletedId));
+            }
           }
         },
-      )
-      .on(
-        "postgres_changes",
-        {
-          event: "DELETE",
-          schema: "public",
-          table: "messages",
-        },
-        (payload) => {
-          const deletedId = (payload.old as { id?: string })?.id;
-          if (deletedId && isMounted) {
-            setMessages((prev) => prev.filter((m) => m.id !== deletedId));
-          }
-        },
-      )
+      ) as unknown as {
+        on: (
+          type: "broadcast",
+          filter: { event: string },
+          callback: (payload: { payload?: ChatMessage }) => void,
+        ) => typeof baseChannel;
+      }
+    )
+      .on("broadcast", { event: "new_message" }, (payload) => {
+        if (payload?.payload) {
+          handleIncomingMessage(payload.payload);
+        }
+      })
       .subscribe();
+
+    // Sincronização leve a cada 4s para garantir que múltiplos admins trabalhando juntos vejam tudo em tempo real
+    const syncTimer = window.setInterval(() => {
+      messagesService
+        .listConversation(userId, receiverId)
+        .then((fresh) => {
+          if (isMounted) {
+            setMessages(fresh);
+          }
+        })
+        .catch(() => null);
+    }, 4000);
 
     // 3. Cleanup: desinscreve e remove o canal ao desmontar ou trocar de interlocutor
     return () => {
       isMounted = false;
+      window.clearInterval(syncTimer);
       supabase.removeChannel(channel);
     };
   }, [userId, receiverId, interlocutorRole]);
@@ -131,6 +151,27 @@ export function useChat(
           }
           return [...prev, sentMessage];
         });
+
+        // Notifica todos os outros admins e o cliente conectados em tempo real
+        try {
+          const supabase = createSupabaseBrowserClient();
+          const bChannel = supabase.channel("chat-messages-broadcast");
+          bChannel.subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              bChannel
+                .send({
+                  type: "broadcast",
+                  event: "new_message",
+                  payload: sentMessage,
+                })
+                .finally(() => {
+                  supabase.removeChannel(bChannel);
+                });
+            }
+          });
+        } catch {
+          // Ignora falha de broadcast opcional
+        }
 
         return true;
       } catch (err) {

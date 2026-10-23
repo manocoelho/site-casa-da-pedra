@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { redirect } from "next/navigation";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { createUsersService } from "@/services/users";
 import { createMessagesService } from "@/services/messages";
 import { ChatLayout } from "@/components/chat/ChatLayout";
@@ -27,8 +28,9 @@ export default async function ChatPage({ searchParams }: ChatPageProps) {
 
   const { with: targetInterlocutorId } = await searchParams;
 
-  const usersService = createUsersService(supabase);
-  const messagesService = createMessagesService(supabase);
+  const adminSupabase = createSupabaseAdminClient();
+  const usersService = createUsersService(adminSupabase);
+  const messagesService = createMessagesService(adminSupabase);
 
   const [profile, adminContact, initialConversations] = await Promise.all([
     usersService.getProfileById(userData.user.id),

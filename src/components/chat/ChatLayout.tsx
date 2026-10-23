@@ -120,6 +120,13 @@ export function ChatLayout({
       )
       .on(
         "broadcast",
+        { event: "new_message" },
+        () => {
+          refresh();
+        },
+      )
+      .on(
+        "broadcast",
         { event: "conversation_deleted" },
         (payload: { payload?: { interlocutorId?: string } }) => {
           const deletedId = payload?.payload?.interlocutorId;
@@ -134,8 +141,13 @@ export function ChatLayout({
       )
       .subscribe();
 
+    const syncInterval = window.setInterval(() => {
+      refresh();
+    }, 6000);
+
     return () => {
       isMounted = false;
+      window.clearInterval(syncInterval);
       supabase.removeChannel(channel);
     };
   }, [currentUser.id]);

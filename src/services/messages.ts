@@ -26,6 +26,21 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
      * Retorna o perfil do proprietário/administrador para servir de contato padrão aos clientes.
      */
     async getAdminContact(): Promise<UserProfile | null> {
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch("/api/chat?action=init", { cache: "no-store" });
+          const json = (await res.json()) as {
+            ok?: boolean;
+            adminContact?: UserProfile | null;
+          };
+          if (res.ok && json.ok && json.adminContact) {
+            return json.adminContact;
+          }
+        } catch {
+          // Continua para fallback direto
+        }
+      }
+
       const { data, error } = await supabase
         .from("users")
         .select("*")
@@ -72,6 +87,25 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
       userId: string,
       receiverId: string,
     ): Promise<ChatMessage[]> {
+      // 0. No navegador, usa a rota unificada /api/chat (que une todos os admins sem bloqueio de RLS)
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch(
+            `/api/chat?action=messages&interlocutorId=${encodeURIComponent(receiverId)}`,
+            { cache: "no-store" },
+          );
+          const json = (await res.json()) as {
+            ok?: boolean;
+            messages?: ChatMessage[];
+          };
+          if (res.ok && json.ok && Array.isArray(json.messages)) {
+            return json.messages;
+          }
+        } catch {
+          // Continua para os fallbacks abaixo
+        }
+      }
+
       // 1. Tenta a função RPC unificada get_conversation_messages
       try {
         type RpcClient = {
@@ -171,6 +205,31 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
         };
       }
 
+      // No navegador, envia via rota unificada /api/chat para que todos os admins respondam como o Dono
+      // e a conversa fique unificada em uma única aba para o cliente e para todos os admins
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch("/api/chat", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ receiverId, content: trimmed }),
+          });
+          const json = (await res.json()) as {
+            ok?: boolean;
+            data?: ChatMessage;
+            error?: string;
+          };
+          if (res.ok && json.ok && json.data) {
+            return { ok: true, data: json.data };
+          }
+          if (json.error) {
+            return { ok: false, error: json.error };
+          }
+        } catch {
+          // Continua para fallback direto
+        }
+      }
+
       const { data, error } = await supabase
         .from("messages")
         .insert({
@@ -199,6 +258,22 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
      * Para qualquer administrador, retorna a lista de todos os hóspedes que contataram a pousada.
      */
     async listConversations(userId: string): Promise<ChatConversation[]> {
+      // 0. No navegador, usa a rota unificada /api/chat
+      if (typeof window !== "undefined") {
+        try {
+          const res = await fetch("/api/chat?action=init", { cache: "no-store" });
+          const json = (await res.json()) as {
+            ok?: boolean;
+            conversations?: ChatConversation[];
+          };
+          if (res.ok && json.ok && Array.isArray(json.conversations)) {
+            return json.conversations;
+          }
+        } catch {
+          // Continua para os fallbacks abaixo
+        }
+      }
+
       // 1. Tenta RPC get_user_conversations
       try {
         type RpcClient = {
