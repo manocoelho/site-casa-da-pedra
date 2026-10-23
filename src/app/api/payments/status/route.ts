@@ -4,6 +4,7 @@ import {
   findLatestMpPaymentByReference,
   getMercadoPagoPayment,
 } from "@/lib/mercadopago";
+import { notifyReservationConfirmedById } from "@/lib/email";
 import type { PaymentStatus, PaymentStatusResponse } from "@/types";
 
 export async function GET(request: Request) {
@@ -117,6 +118,8 @@ export async function GET(request: Request) {
             .update({ status: "confirmada" })
             .eq("id", reservationId);
         }
+
+        await notifyReservationConfirmedById(reservationId);
 
         return NextResponse.json({
           ok: true,

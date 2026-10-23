@@ -5,6 +5,7 @@ import {
 import type { Reservation, ReservationStatus } from "@/types/entities";
 import type {
   AdminReservation,
+  ClientReservation,
   CreateReservationInput,
   OccupiedDateRange,
   ReservationOperationResult,
@@ -239,6 +240,41 @@ export function createReservationsService(supabase: TypedSupabaseClient) {
       }
 
       return data || [];
+    },
+
+    /**
+     * Lista as reservas feitas pelo usuário logado, incluindo os dados e fotos do flat.
+     */
+    async listMyReservationsWithFlats(): Promise<ClientReservation[]> {
+      const { data: userData } = await supabase.auth.getUser();
+      if (!userData?.user) return [];
+
+      // Expira reservas Pix pendentes vencidas (> 30 min) antes de listar
+      try {
+        await (supabase as unknown as { rpc: (fn: string) => Promise<unknown> }).rpc(
+          "expire_unpaid_reservations",
+        );
+      } catch {
+        // Ignora caso a função ainda não exista
+      }
+
+      const { data, error } = await supabase
+        .from("reservations")
+        .select(
+          "*, flats(id, titulo, descricao, preco_diaria, max_hospedes, flat_photos(id, url_imagem))",
+        )
+        .eq("user_id", userData.user.id)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error(
+          "[reservations] listMyReservationsWithFlats error:",
+          error.message,
+        );
+        return [];
+      }
+
+      return (data as unknown as ClientReservation[]) || [];
     },
 
     /**

@@ -229,13 +229,23 @@ export function ReservationCard({
             );
           })()}
 
-          <Button
-            variant="outline"
-            onClick={resetSelection}
-            className="w-full text-xs"
-          >
-            Fazer outra reserva
-          </Button>
+          <div className="flex flex-col gap-2">
+            <Link
+              href={ROUTES.minhasReservas}
+              className="inline-flex h-10 w-full items-center justify-center gap-2 rounded-xl bg-stone-900 px-4 text-xs font-semibold text-white shadow-xs transition hover:bg-stone-800 dark:bg-amber-500 dark:text-stone-950 dark:hover:bg-amber-400"
+            >
+              <CalendarIcon className="size-4" />
+              <span>Acompanhar em Minhas Reservas</span>
+            </Link>
+
+            <Button
+              variant="outline"
+              onClick={resetSelection}
+              className="w-full text-xs"
+            >
+              Fazer outra reserva
+            </Button>
+          </div>
         </div>
       ) : activePixPayment ? (
         /* 2. Tela de QR Code Pix Ativo (Expiração em 30 minutos + Verificação Automática) */

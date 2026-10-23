@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { getMercadoPagoPayment } from "@/lib/mercadopago";
+import { notifyReservationConfirmedById } from "@/lib/email";
 
 export async function POST(request: Request) {
   try {
@@ -65,6 +66,8 @@ export async function POST(request: Request) {
           .update({ status: "confirmada" })
           .eq("id", reservationId);
       }
+
+      await notifyReservationConfirmedById(reservationId);
     } else if (mpInfo.status === "rejected" || mpInfo.status === "cancelled") {
       const updateCancel = await adminSupabase
         .from("reservations")

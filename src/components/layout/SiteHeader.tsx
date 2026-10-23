@@ -2,15 +2,20 @@
 
 import Link from "next/link";
 import Image from "next/image";
+import { usePathname } from "next/navigation";
 import { Button } from "@/components/ui/Button";
+import { CalendarIcon } from "@/components/ui/icons";
 import { useAuthUser } from "@/hooks/useAuthUser";
 import { useChatNotifications } from "@/context/ChatNotificationContext";
 import { ROUTES } from "@/lib/routes";
 
 export function SiteHeader() {
+  const pathname = usePathname();
   const { profile, user, isLoading, isAuthenticated, isAdmin, signOut } = useAuthUser();
   const { unreadCount } = useChatNotifications();
   const displayName = profile?.nome ?? user?.email ?? "";
+  const isMyReservationsActive = pathname?.startsWith(ROUTES.minhasReservas);
+  const isChatActive = pathname?.startsWith(ROUTES.chat);
 
   return (
     <header className="border-b border-stone-200 bg-white/80 backdrop-blur dark:border-stone-800 dark:bg-stone-950/80">
@@ -43,12 +48,27 @@ export function SiteHeader() {
             <span className="h-9 w-32 animate-pulse rounded-lg bg-stone-100 dark:bg-stone-800" />
           ) : isAuthenticated ? (
             <>
-              <span className="hidden text-sm text-stone-600 sm:inline dark:text-stone-300">
+              <span className="hidden text-sm text-stone-600 md:inline dark:text-stone-300">
                 Olá, <strong className="font-medium">{displayName}</strong>
               </span>
               <Link
+                href={ROUTES.minhasReservas}
+                className={`inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  isMyReservationsActive
+                    ? "bg-stone-900 text-white dark:bg-amber-500 dark:text-stone-950"
+                    : "text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                }`}
+              >
+                <CalendarIcon className="size-3.5" />
+                <span>Minhas Reservas</span>
+              </Link>
+              <Link
                 href={ROUTES.chat}
-                className="relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold text-stone-700 transition hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                className={`relative inline-flex items-center gap-1.5 rounded-lg px-3 py-1.5 text-xs font-semibold transition ${
+                  isChatActive
+                    ? "bg-stone-900 text-white dark:bg-amber-500 dark:text-stone-950"
+                    : "text-stone-700 hover:bg-stone-100 dark:text-stone-300 dark:hover:bg-stone-800"
+                }`}
               >
                 <span>Chat</span>
                 {unreadCount > 0 && (

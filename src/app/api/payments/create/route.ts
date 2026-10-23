@@ -8,6 +8,7 @@ import {
   createMercadoPagoPixPayment,
   isValidCpf,
 } from "@/lib/mercadopago";
+import { sendReservationNotification } from "@/lib/email";
 import type { CreatePaymentRequest, CreatePaymentResponse } from "@/types";
 
 function calculateStayTotal(
@@ -406,6 +407,23 @@ export async function POST(request: Request) {
           })
           .eq("id", reservationId);
 
+        // Envia e-mail e mensagem no chat com os dados da reserva + código Pix
+        await sendReservationNotification({
+          reservationId,
+          userId: user.id,
+          guestName: payerName,
+          guestEmail: payerEmail,
+          flatTitle: flat.titulo,
+          dataInicio,
+          dataFim,
+          amount: finalAmount,
+          discountAmount,
+          paymentMethod: "pix",
+          status: isApproved ? "confirmada" : "pendente",
+          pixQrCode: pixResult.qrCode,
+          siteOrigin: requestOrigin,
+        });
+
         return NextResponse.json({
           ok: true,
           paymentMethod: "pix",
@@ -458,6 +476,22 @@ export async function POST(request: Request) {
             pix_expira_em: expiresAtIso,
           })
           .eq("id", reservationId);
+
+        // Envia e-mail e mensagem no chat com os dados da reserva iniciada no cartão
+        await sendReservationNotification({
+          reservationId,
+          userId: user.id,
+          guestName: payerName,
+          guestEmail: payerEmail,
+          flatTitle: flat.titulo,
+          dataInicio,
+          dataFim,
+          amount: finalAmount,
+          discountAmount: 0,
+          paymentMethod: "cartao",
+          status: "pendente",
+          siteOrigin: requestOrigin,
+        });
 
         return NextResponse.json({
           ok: true,

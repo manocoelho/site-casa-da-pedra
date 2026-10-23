@@ -7,6 +7,7 @@ export const ROUTES = {
   cadastro: "/cadastro",
   authCallback: "/auth/callback",
   minhaConta: "/minha-conta",
+  minhasReservas: "/minhas-reservas",
   admin: "/admin",
   chat: "/chat",
   privacidade: "/privacidade",
@@ -17,6 +18,7 @@ export const ROUTES = {
 /** Rotas que exigem usuário autenticado (prefixos). */
 export const PROTECTED_ROUTE_PREFIXES: readonly string[] = [
   ROUTES.minhaConta,
+  ROUTES.minhasReservas,
   ROUTES.admin,
   ROUTES.chat,
 ];

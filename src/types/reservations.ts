@@ -30,3 +30,17 @@ export interface AdminReservation extends Reservation {
     email: string | null;
   } | null;
 }
+
+export interface ClientReservation extends Reservation {
+  flats?: {
+    id: string;
+    titulo: string;
+    descricao?: string;
+    preco_diaria: number;
+    max_hospedes?: number;
+    flat_photos?: Array<{
+      id: string;
+      url_imagem: string;
+    }>;
+  } | null;
+}
