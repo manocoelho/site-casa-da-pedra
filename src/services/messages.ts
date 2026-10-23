@@ -318,6 +318,7 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
 
     /**
      * Encerra e exclui todas as mensagens da conversa com um interlocutor (uso administrativo).
+     * Remove definitivamente do banco via API administrativa para que desapareça para TODOS os administradores.
      */
     async deleteConversation(
       interlocutorId: string,
@@ -326,7 +327,27 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
         return { ok: false, error: "ID do contato inválido." };
       }
 
-      // 1. Tenta via RPC SECURITY DEFINER (delete_conversation_messages)
+      // 1. Exclui via rota de servidor com Service Role (apaga no banco para todos os admins sem bloqueio de RLS)
+      if (typeof window !== "undefined") {
+        try {
+          const response = await fetch("/api/chat/delete-conversation", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ interlocutorId }),
+          });
+          const result = (await response.json()) as {
+            ok?: boolean;
+            error?: string;
+          };
+          if (response.ok && result.ok) {
+            return { ok: true };
+          }
+        } catch {
+          // Continua para os fallbacks abaixo caso esteja offline
+        }
+      }
+
+      // 2. Tenta via RPC SECURITY DEFINER (delete_conversation_messages)
       try {
         type RpcClient = {
           rpc: (
@@ -348,7 +369,7 @@ export function createMessagesService(supabase: TypedSupabaseClient) {
         // Continua para fallback direto
       }
 
-      // 2. Fallback: exclusão direta na tabela messages (requer policy DELETE para admin)
+      // 3. Fallback: exclusão direta na tabela messages (requer policy DELETE para admin)
       const { error } = await supabase
         .from("messages")
         .delete()

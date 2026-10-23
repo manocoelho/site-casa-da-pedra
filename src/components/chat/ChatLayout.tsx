@@ -106,7 +106,7 @@ export function ChatLayout({
 
     const supabase = createSupabaseBrowserClient();
     const channel = supabase
-      .channel(`chat-sidebar-sync:${currentUser.id}`)
+      .channel("chat-admin-global-sync")
       .on(
         "postgres_changes",
         {
@@ -118,6 +118,20 @@ export function ChatLayout({
           refresh();
         },
       )
+      .on(
+        "broadcast",
+        { event: "conversation_deleted" },
+        (payload: { payload?: { interlocutorId?: string } }) => {
+          const deletedId = payload?.payload?.interlocutorId;
+          if (!deletedId || !isMounted) return;
+          setConversations((prev) =>
+            prev.filter((c) => c.interlocutorId !== deletedId),
+          );
+          setActiveInterlocutorId((current) =>
+            current === deletedId ? undefined : current,
+          );
+        },
+      )
       .subscribe();
 
     return () => {
@@ -126,22 +140,50 @@ export function ChatLayout({
     };
   }, [currentUser.id]);
 
-  // Encerrar / excluir conversa (para administradores)
+  // Encerrar / excluir conversa (para TODOS os administradores)
   const handleDeleteConversation = useCallback(
     async (interlocutorId: string, interlocutorName: string) => {
       if (!isAdmin || !interlocutorId) return;
 
       const confirmed = window.confirm(
-        `Deseja encerrar e excluir a conversa com "${interlocutorName}"? Ela será removida da sua lista de atendimentos.`,
+        `Deseja encerrar e excluir a conversa com "${interlocutorName}"? Ela será removida para todos os administradores.`,
       );
       if (!confirmed) return;
 
       setDeletingInterlocutorId(interlocutorId);
       try {
         const messagesService = getBrowserMessagesService();
-        await messagesService.deleteConversation(interlocutorId);
+        const res = await messagesService.deleteConversation(interlocutorId);
 
-        // Registra o timestamp de encerramento para ocultar imediatamente
+        if (!res.ok) {
+          window.alert(
+            res.error || "Não foi possível excluir a conversa no banco.",
+          );
+          return;
+        }
+
+        // Notifica outros administradores conectados em tempo real via Broadcast
+        try {
+          const supabase = createSupabaseBrowserClient();
+          const broadcastChannel = supabase.channel("chat-admin-global-sync");
+          broadcastChannel.subscribe((status) => {
+            if (status === "SUBSCRIBED") {
+              broadcastChannel
+                .send({
+                  type: "broadcast",
+                  event: "conversation_deleted",
+                  payload: { interlocutorId },
+                })
+                .finally(() => {
+                  supabase.removeChannel(broadcastChannel);
+                });
+            }
+          });
+        } catch {
+          // Ignora falha de broadcast opcional
+        }
+
+        // Registra o timestamp de encerramento local por segurança adicional
         const nowIso = new Date().toISOString();
         setClosedTimestamps((prev) => {
           const next = { ...prev, [interlocutorId]: nowIso };
